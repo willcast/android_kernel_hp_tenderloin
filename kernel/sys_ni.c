@@ -181,3 +181,7 @@ cond_syscall(sys_eventfd2);
 
 /* performance counters: */
 cond_syscall(sys_perf_event_open);
+
+
+/* open by handle */
+cond_syscall(sys_name_to_handle_at);
