@@ -1309,7 +1309,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 		Since it quickly decides to close us. This results in shutdown of the lcd
 		and boot anim, and ugly blankness on the screen. To fix this we simply fail
 		on the first open. Would be nice to just not be opened instead */
-static int first=1;
+static int first=0;
 static int msm_fb_open(struct fb_info *info, int user)
 {
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
