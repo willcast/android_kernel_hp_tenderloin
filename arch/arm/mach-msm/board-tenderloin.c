@@ -4682,6 +4682,7 @@ static struct i2c_registry msm8x60_i2c_devices[] __initdata = {
         ARRAY_SIZE(lsm303dlh_mag_i2c_board_info),
     },
 #endif
+#if 0
     {
         I2C_TENDERLOIN,
         MSM_GSBI3_QUP_I2C_BUS_ID,
@@ -4694,6 +4695,7 @@ static struct i2c_registry msm8x60_i2c_devices[] __initdata = {
         &isl29023_i2c_board_info,
         ARRAY_SIZE(isl29023_i2c_board_info),
     },
+#endif
 #ifdef CONFIG_PMIC8058
 	{
 		I2C_TENDERLOIN,
@@ -6375,7 +6377,7 @@ static struct msm_board_data tenderloin_board_data __initdata = {
 	.gpiomux_cfgs = tenderloin_gpiomux_cfgs,
 };
 
-static void __init platform_fixup_pin_numbers(void)
+void __init platform_fixup_pin_numbers(void)
 {
 	// touchpanel
 	xMT1386_board_info[0].irq =  MSM_GPIO_TO_INT(pin_table[MXT1386_TS_PEN_IRQ]);
@@ -6390,14 +6392,16 @@ static void __init platform_fixup_pin_numbers(void)
 	lm8502_board_info[0].irq = MSM_GPIO_TO_INT(pin_table[LM8502_LIGHTING_INT_IRQ_PIN]);
 
 	// Charging
+#ifdef CONFIG_MAX8903B_CHARGER
 	max8903b_charger_pdata.IUSB_in = pin_table[MAX8903B_GPIO_USB_CHG_MODE_PIN];
 	max8903b_charger_pdata.DOK_N_out = pin_table[MAX8903B_GPIO_DC_OK_PIN];
-
+#endif
 	// GPIO keys
 	board_gpio_keys_buttons[0].gpio = pin_table[VOL_UP_GPIO_PIN];
 	board_gpio_keys_buttons[1].gpio = pin_table[VOL_DN_GPIO_PIN];
 
 	// A6
+#ifdef CONFIG_A6
 	tenderloin_a6_0_platform_data.pwr_gpio = pin_table[TENDERLOIN_A6_0_MSM_IRQ_PIN];
 	tenderloin_a6_0_platform_data.sbw_tck_gpio = pin_table[TENDERLOIN_A6_0_TCK_PIN];
 	tenderloin_a6_0_platform_data.sbw_tdio_gpio = pin_table[TENDERLOIN_A6_0_TDIO_PIN];
@@ -6439,7 +6443,7 @@ static void __init platform_fixup_pin_numbers(void)
 	}
 
 	a6_boardtype(pin_table);
-
+#endif
 }
 
 /*
@@ -6895,6 +6899,7 @@ static void __init msm8x60_init(struct msm_board_data *board_data)
 	|| defined (CONFIG_TOUCHSCREEN_CY8CTMA395_MODULE)
 	tenderloin_tp_init (true);
 #endif
+
 
 #ifdef CONFIG_MSM_DSPS
 	msm8x60_init_dsps();

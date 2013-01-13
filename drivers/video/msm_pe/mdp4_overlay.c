@@ -426,7 +426,7 @@ void mdp4_overlay_rgb_setup(struct mdp4_overlay_pipe *pipe)
 	dst_xy = ((pipe->dst_y << 16) | pipe->dst_x);
 
 	format = mdp4_overlay_format(pipe);
-	pattern = mdp4_overlay_unpack_pattern2(pipe);
+	pattern = mdp4_overlay_unpack_pattern(pipe);
 
 #ifdef MDP4_IGC_LUT_ENABLE
 	pipe->op_mode |= MDP4_OP_IGC_LUT_EN;
