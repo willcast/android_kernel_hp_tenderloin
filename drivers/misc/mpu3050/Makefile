@@ -6,7 +6,6 @@
 # MPU
 obj-$(CONFIG_MPU_SENSORS_MPU3050)	+= mpu3050.o
 mpu3050-objs += mpuirq.o \
-	slaveirq.o \
 	mpu-dev.o \
 	mpu-i2c.o \
 	mlsl-kernel.o \

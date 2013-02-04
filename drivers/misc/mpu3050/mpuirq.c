@@ -35,8 +35,8 @@
 #include <linux/mm.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
-#include <linux/uaccess.h>
-#include <linux/io.h>
+#include <asm/uaccess.h>
+#include <asm/io.h>
 
 #include "mpu.h"
 #include "mpuirq.h"
@@ -87,7 +87,7 @@ static int mpuirq_release(struct inode *inode, struct file *file)
 
 /* read function called when from /dev/mpuirq is read */
 static ssize_t mpuirq_read(struct file *file,
-			   char *buf, size_t count, loff_t *ppos)
+			   char *buf, size_t count, loff_t * ppos)
 {
 	int len, err;
 	struct mpuirq_dev_data *p_mpuirq_dev_data = file->private_data;
@@ -102,7 +102,6 @@ static ssize_t mpuirq_read(struct file *file,
 	if (mpuirq_dev_data.data_ready && NULL != buf
 	    && count >= sizeof(mpuirq_data)) {
 		err = copy_to_user(buf, &mpuirq_data, sizeof(mpuirq_data));
-		mpuirq_data.data_type = 0;
 	} else {
 		return 0;
 	}
@@ -119,10 +118,13 @@ static ssize_t mpuirq_read(struct file *file,
 unsigned int mpuirq_poll(struct file *file, struct poll_table_struct *poll)
 {
 	int mask = 0;
+	struct mpuirq_dev_data *p_mpuirq_dev_data = file->private_data;
 
 	poll_wait(file, &mpuirq_wait, poll);
 	if (mpuirq_dev_data.data_ready)
 		mask |= POLLIN | POLLRDNORM;
+	dev_dbg(p_mpuirq_dev_data->dev->this_device,
+		"%s: returning %d\n", __func__, mask);
 	return mask;
 }
 
@@ -154,10 +156,6 @@ static long mpuirq_ioctl(struct file *file,
 		break;
 	case MPUIRQ_SET_FREQUENCY_DIVIDER:
 		mpuirq_dev_data.accel_divider = arg;
-		break;
-	case MPUIRQ_GET_DEBUG_FLAG:
-		if (copy_to_user((int *) arg, &mpu_debug_flag, sizeof(int)))
-			return -EFAULT;
 		break;
 	default:
 		retval = -EINVAL;
@@ -210,19 +208,22 @@ static irqreturn_t mpuirq_handler(int irq, void *dev_id)
 
 	/* wake up (unblock) for reading data from userspace */
 	/* and ignore first interrupt generated in module init */
-	mpuirq_dev_data.data_ready = 1;
+	if (mpuirq_data.interruptcount > 1) {
+		mpuirq_dev_data.data_ready = 1;
 
-	do_gettimeofday(&irqtime);
-	mpuirq_data.irqtime = (((long long) irqtime.tv_sec) << 32);
-	mpuirq_data.irqtime += irqtime.tv_usec;
+		do_gettimeofday(&irqtime);
+		mpuirq_data.irqtime = (((long long) irqtime.tv_sec) << 32);
+		mpuirq_data.irqtime += irqtime.tv_usec;
 
-	if ((mpuirq_dev_data.accel_divider >= 0) &&
-		(0 == (mycount % (mpuirq_dev_data.accel_divider + 1)))) {
-		schedule_work((struct work_struct
-				*) (&mpuirq_dev_data));
+		if ((mpuirq_dev_data.accel_divider >= 0) &&
+		    (0 ==
+		     (mycount % (mpuirq_dev_data.accel_divider + 1)))) {
+			schedule_work((struct work_struct
+				       *) (&mpuirq_dev_data));
+		}
+
+		wake_up_interruptible(&mpuirq_wait);
 	}
-
-	wake_up_interruptible(&mpuirq_wait);
 
 	return IRQ_HANDLED;
 

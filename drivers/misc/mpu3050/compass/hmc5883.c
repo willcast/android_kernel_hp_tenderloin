@@ -1,7 +1,20 @@
 /*
  $License:
     Copyright (C) 2010 InvenSense Corporation, All Rights Reserved.
- $
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  $
  */
 
 /**
@@ -138,7 +151,7 @@ int hmc5883_read(void *mlsl_handle,
 	unsigned char stat;
 	tMLError result = ML_SUCCESS;
 	unsigned char tmp;
-	short axisFixed;
+	short zAxisfixed;
 
 	/* Read status reg. to check if data is ready */
 	result =
@@ -162,38 +175,17 @@ int hmc5883_read(void *mlsl_handle,
 		/*drop data if overflows */
 		if ((data[0] == 0xf0) || (data[2] == 0xf0)
 		    || (data[4] == 0xf0)) {
-			/* trigger next measurement read */
-			result =
-			    MLSLSerialWriteSingle(mlsl_handle,
-							pdata->address,
-							HMC_REG_MODE,
-							HMC_MODE_SINGLE);
-			ERROR_CHECK(result);
 			return ML_ERROR_COMPASS_DATA_OVERFLOW;
 		}
 		/* convert to fixed point and apply sensitivity correction for
 		   Z-axis */
-		axisFixed =
+		zAxisfixed =
 		    (short) ((unsigned short) data[5] +
 			     (unsigned short) data[4] * 256);
-		/* scale up by 1.125 (36/32) */
-		axisFixed = (short) (axisFixed * 36);
-		data[4] = axisFixed >> 8;
-		data[5] = axisFixed & 0xFF;
-
-		axisFixed =
-		    (short) ((unsigned short) data[3] +
-			     (unsigned short) data[2] * 256);
-		axisFixed = (short) (axisFixed * 32);
-		data[2] = axisFixed >> 8;
-		data[3] = axisFixed & 0xFF;
-
-		axisFixed =
-		    (short) ((unsigned short) data[1] +
-			     (unsigned short) data[0] * 256);
-		axisFixed = (short) (axisFixed * 32);
-		data[0] = axisFixed >> 8;
-		data[1] = axisFixed & 0xFF;
+		/* scale up by 1.122 */
+		zAxisfixed = (short) (zAxisfixed * 9) >> 3;
+		data[4] = zAxisfixed >> 8;
+		data[5] = zAxisfixed & 0xFF;
 
 		/* trigger next measurement read */
 		result =
@@ -214,12 +206,9 @@ int hmc5883_read(void *mlsl_handle,
 }
 
 struct ext_slave_descr hmc5883_descr = {
-	/*.init             = */ NULL,
-	/*.exit             = */ NULL,
 	/*.suspend          = */ hmc5883_suspend,
 	/*.resume           = */ hmc5883_resume,
 	/*.read             = */ hmc5883_read,
-	/*.config           = */ NULL,
 	/*.name             = */ "hmc5883",
 	/*.type             = */ EXT_SLAVE_TYPE_COMPASS,
 	/*.id               = */ COMPASS_ID_HMC5883,
@@ -233,7 +222,10 @@ struct ext_slave_descr *hmc5883_get_slave_descr(void)
 {
 	return &hmc5883_descr;
 }
+
+#ifdef __KERNEL__
 EXPORT_SYMBOL(hmc5883_get_slave_descr);
+#endif
 
 /**
  *  @}
