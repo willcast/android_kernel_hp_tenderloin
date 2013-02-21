@@ -41,6 +41,10 @@
 #define SOCINFO_VERSION_MAJOR(ver) ((ver & 0xffff0000) >> 16)
 #define SOCINFO_VERSION_MINOR(ver) (ver & 0x0000ffff)
 
+#define cpu_is_apq8064() 0
+#define cpu_is_msm8930() 0
+#define cpu_is_msm8960() 0
+
 enum msm_cpu {
 	MSM_CPU_UNKNOWN = 0,
 	MSM_CPU_7X01,
