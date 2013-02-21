@@ -187,6 +187,9 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 		return -EINVAL;
 	}
 
+	// Set a conservative value fir the startup process.
+	policy->max = 1836000;
+
 	if (cur_freq != table[index].frequency) {
 		int ret = 0;
 		ret = acpuclk_set_rate(policy->cpu, table[index].frequency,
