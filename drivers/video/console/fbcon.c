@@ -3529,7 +3529,7 @@ static int __init
 fbcon_args(char *str)
 {
         if (!strcmp(str, "disable"))
-                enable_fbcon = 0;
+                printk(KERN_INFO "fbcon: staying enabled despite boot param.\n");
 
         return 0;
 }
