@@ -128,6 +128,11 @@ struct completion;
 struct pt_regs;
 struct user;
 
+struct va_format {
+	const char *fmt;
+	va_list *va;
+};
+
 #ifdef CONFIG_PREEMPT_VOLUNTARY
 extern int _cond_resched(void);
 # define might_resched() _cond_resched()

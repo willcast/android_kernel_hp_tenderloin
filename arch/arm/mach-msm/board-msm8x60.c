@@ -3203,7 +3203,9 @@ static struct platform_device *rumi_sim_devices[] __initdata = {
 	&msm_rotator_device,
 #endif
 	&msm_fb_device,
-	&msm_device_kgsl,
+	&msm_kgsl_3d0,
+	&msm_kgsl_2d0,
+	&msm_kgsl_2d1,
 	&lcdc_samsung_panel_device,
 #ifdef CONFIG_FB_MSM_HDMI_MSM_PANEL
 	&hdmi_msm_device,
@@ -3512,7 +3514,9 @@ static struct platform_device *surf_devices[] __initdata = {
 	&msm_rotator_device,
 #endif
 	&msm_fb_device,
-	&msm_device_kgsl,
+	&msm_kgsl_3d0,
+	&msm_kgsl_2d0,
+	&msm_kgsl_2d1,
 	&lcdc_samsung_panel_device,
 #ifdef CONFIG_FB_MSM_LCDC_SAMSUNG_OLED_PT
 	&lcdc_samsung_oled_panel_device,

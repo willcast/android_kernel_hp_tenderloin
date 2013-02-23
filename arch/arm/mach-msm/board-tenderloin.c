@@ -3905,7 +3905,9 @@ static struct platform_device *tenderloin_devices[] __initdata = {
 	&msm_rotator_device,
 #endif
 	&msm_fb_device,
-	&msm_device_kgsl,
+	&msm_kgsl_3d0,
+	&msm_kgsl_2d0,
+	&msm_kgsl_2d1,
 #ifdef CONFIG_FB_MSM_LCDC_LG_XGA_PANEL
 	&lcdc_lg_panel_device,
 #endif
