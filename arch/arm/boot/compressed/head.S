@@ -332,7 +332,7 @@ wont_overwrite:	mov	r0, r4
 		movhi	r1, r5
 
 		/* Compute max space for atags, if max <= 0 don't copy. */
-		ldr	r0, =0x40000100	@ dest
+		ldr	r0, =0x40200100	@ dest
 		subs	r2, r1, r0		@ max = min(zreladdr, _start) - dest
 		bls	call_kernel
 
