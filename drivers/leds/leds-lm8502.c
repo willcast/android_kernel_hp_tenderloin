@@ -913,8 +913,9 @@ static void lm8502_mod_brightness(struct work_struct *work)
             for(i = 0; i < led_config->nleds; i++)
             {
                 lm8502_i2c_write_reg(led_config->client, led_config->led_list[i].current_addr, pwm_value);
-                printk(KERN_DEBUG"lm8502_mod_brightness: set LED%d brightness (%d) percent\n", 
-                    (led_config->led_list[i].current_addr - 0x25), led_config->brightness);
+		// willcast
+                //printk(KERN_DEBUG"lm8502_mod_brightness: set LED%d brightness (%d) percent\n"
+		//(led_config->led_list[i].current_addr - 0x25), led_config->brightness);
             }
             break;
         /* HW Groups can change brightness for all LEDs with a single command */
