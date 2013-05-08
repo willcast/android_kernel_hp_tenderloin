@@ -35,6 +35,7 @@
 #include <asm/thread_notify.h>
 #include <asm/stacktrace.h>
 #include <asm/mach/time.h>
+#include <asm/cacheflush.h>
 
 static const char *processor_modes[] = {
   "USER_26", "FIQ_26" , "IRQ_26" , "SVC_26" , "UK4_26" , "UK5_26" , "UK6_26" , "UK7_26" ,
@@ -84,10 +85,9 @@ __setup("hlt", hlt_setup);
 
 void arm_machine_restart(char mode, const char *cmd)
 {
-	/*
-	 * Clean and disable cache, and turn off interrupts
-	 */
-	cpu_proc_fin();
+	/* Disable interrupts first */
+	local_irq_disable();
+	local_fiq_disable();
 
 	/*
 	 * Tell the mm system that we are going to reboot -
@@ -95,6 +95,15 @@ void arm_machine_restart(char mode, const char *cmd)
 	 * soft boot works.
 	 */
 	setup_mm_for_reboot(mode);
+
+	/* Clean and invalidate caches */
+	flush_cache_all();
+
+	/* Turn off caching */
+	cpu_proc_fin();
+
+	/* Push out any further dirty data, and ensure cache is empty */
+	flush_cache_all();
 
 	/*
 	 * Now call the architecture specific reboot code.
