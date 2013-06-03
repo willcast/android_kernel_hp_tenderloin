@@ -485,25 +485,4 @@ config INPUT_ISL29023
 	  This driver can also be built as a module.  If so, the module
 	  will be called isl29023.
 
-config INPUT_HP_ECOMPASS
-	tristate "HP dummy eCompass driver"
-	default n
-	help
-	  Say Y here if you want to support HP eCompass Interface. 
-
-config INPUT_HP_GRAVITY_SENSOR
-	tristate "HP dummy gravity input device"
-	default n
-	help
-	  Say Y here if you want to support HP Gravity Interface. 
-	  
-config INPUT_CYPRESS_CY8C20236A
-	tristate "CYPRESS proximity sensor support"
-	default n
-	help
-	  Say Y here if you want support to proximity sensor.
-
-	  To compile this driver as a module, choose M here: the
-	  module will be called kp_flip_switch.
-
 endif

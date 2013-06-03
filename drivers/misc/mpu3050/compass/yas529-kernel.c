@@ -1,20 +1,7 @@
 /*
  $License:
     Copyright (C) 2010 InvenSense Corporation, All Rights Reserved.
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  $
+ $
  */
 /**
  *  @defgroup   ACCELDL (Motion Library - Accelerometer Driver Layer)
@@ -45,14 +32,14 @@
 
 /*----- YAMAHA YAS529 Registers ------*/
 enum YAS_REG {
-	YAS_REG_CMDR = 0x00,	 /* 000 < 5 */
-	YAS_REG_XOFFSETR = 0x20, /* 001 < 5 */
-	YAS_REG_Y1OFFSETR = 0x40,/* 010 < 5 */
-	YAS_REG_Y2OFFSETR = 0x60,/* 011 < 5 */
-	YAS_REG_ICOILR = 0x80,	 /* 100 < 5 */
-	YAS_REG_CAL	= 0xA0,	     /* 101 < 5 */
-	YAS_REG_CONFR = 0xC0,	 /* 110 < 5 */
-	YAS_REG_DOUTR = 0xE0	 /* 111 < 5 */
+	YAS_REG_CMDR		= 0x00,	/* 000 < 5 */
+	YAS_REG_XOFFSETR	= 0x20,	/* 001 < 5 */
+	YAS_REG_Y1OFFSETR	= 0x40,	/* 010 < 5 */
+	YAS_REG_Y2OFFSETR	= 0x60,	/* 011 < 5 */
+	YAS_REG_ICOILR		= 0x80,	/* 100 < 5 */
+	YAS_REG_CAL		= 0xA0,	/* 101 < 5 */
+	YAS_REG_CONFR		= 0xC0,	/* 110 < 5 */
+	YAS_REG_DOUTR		= 0xE0	/* 111 < 5 */
 };
 
 /* --------------------- */
@@ -450,9 +437,12 @@ int yas529_read(void *mlsl_handle,
 }
 
 struct ext_slave_descr yas529_descr = {
+	/*.init             = */ NULL,
+	/*.exit             = */ NULL,
 	/*.suspend          = */ yas529_suspend,
 	/*.resume           = */ yas529_resume,
 	/*.read             = */ yas529_read,
+	/*.config           = */ NULL,
 	/*.name             = */ "yas529",
 	/*.type             = */ EXT_SLAVE_TYPE_COMPASS,
 	/*.id               = */ COMPASS_ID_YAS529,
@@ -466,10 +456,7 @@ struct ext_slave_descr *yas529_get_slave_descr(void)
 {
 	return &yas529_descr;
 }
-
-#ifdef __KERNEL__
 EXPORT_SYMBOL(yas529_get_slave_descr);
-#endif
 
 /**
  *  @}

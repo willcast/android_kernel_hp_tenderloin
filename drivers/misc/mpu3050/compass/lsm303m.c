@@ -1,20 +1,7 @@
 /*
  $License:
     Copyright (C) 2010 InvenSense Corporation, All Rights Reserved.
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  $
+ $
  */
 
 /**
@@ -37,8 +24,6 @@
 #include "mpu.h"
 #include "mlsl.h"
 #include "mlos.h"
-
-#include <linux/i2c/lsm303dlh.h>
 
 #include <log.h>
 #undef MPL_LOG_TAG
@@ -104,36 +89,16 @@ enum LSM_MODE {
     Accelerometer Initialization Functions
 *****************************************/
 
-static struct lsm303dlh_mag_data* lsm303dlh_mag_misc_data=NULL;
-
-extern struct lsm303dlh_mag_data * lsm303dlh_mag_get_instance_ext(void);
-extern int lsm303dlh_mag_enable_ext(struct lsm303dlh_mag_data *mag);
-extern int lsm303dlh_mag_disable_ext(struct lsm303dlh_mag_data *mag);
 int lsm303dlhm_suspend(void *mlsl_handle,
 		       struct ext_slave_descr *slave,
 		       struct ext_slave_platform_data *pdata)
 {
 	int result = ML_SUCCESS;
 
-	if (!lsm303dlh_mag_misc_data)
-	{	
-		lsm303dlh_mag_misc_data = lsm303dlh_mag_get_instance_ext();
-	}	
-
-	if (lsm303dlh_mag_misc_data)
-	{	
-		lsm303dlh_mag_misc_data->ext_handle=mlsl_handle;
-		result = lsm303dlh_mag_disable_ext(lsm303dlh_mag_misc_data);
-	}
-	else
-	{
-		pr_err("%s: lsm303dlh_mag_misc_data is NULL\n", __func__);
-	}
-
-//	result =
-//	    MLSLSerialWriteSingle(mlsl_handle, pdata->address,
-//				  LSM_REG_MODE, LSM_MODE_SLEEP);
-//	ERROR_CHECK(result);
+	result =
+	    MLSLSerialWriteSingle(mlsl_handle, pdata->address,
+				  LSM_REG_MODE, LSM_MODE_SLEEP);
+	ERROR_CHECK(result);
 	MLOSSleep(3);
 
 	return result;
@@ -145,21 +110,6 @@ int lsm303dlhm_resume(void *mlsl_handle,
 {
 	int result = ML_SUCCESS;
 
-	if (!lsm303dlh_mag_misc_data)
-	{	
-		lsm303dlh_mag_misc_data = lsm303dlh_mag_get_instance_ext();
-	}	
-    
-	if (lsm303dlh_mag_misc_data)
-	{	
-		lsm303dlh_mag_misc_data->ext_handle=mlsl_handle;
-		result = lsm303dlh_mag_enable_ext(lsm303dlh_mag_misc_data);
-		MLOSSleep(50);
-	}
-	else
-	{
-		pr_err("%s: lsm303dlh_mag_misc_data is NULL\n", __func__);
-	}
 	/* Use single measurement mode. Start at sleep state. */
 	result =
 	    MLSLSerialWriteSingle(mlsl_handle, pdata->address,
@@ -186,7 +136,7 @@ int lsm303dlhm_read(void *mlsl_handle,
 {
 	unsigned char stat;
 	tMLError result = ML_SUCCESS;
-	short zAxisfixed;
+	short axisFixed;
 
 	/* Read status reg. to check if data is ready */
 	result =
@@ -202,19 +152,38 @@ int lsm303dlhm_read(void *mlsl_handle,
 		/*drop data if overflows */
 		if ((data[0] == 0xf0) || (data[2] == 0xf0)
 		    || (data[4] == 0xf0)) {
+			/* trigger next measurement read */
+			result =
+				MLSLSerialWriteSingle(mlsl_handle,
+							pdata->address,
+							LSM_REG_MODE,
+							LSM_MODE_SINGLE);
+			ERROR_CHECK(result);
 			return ML_ERROR_COMPASS_DATA_OVERFLOW;
 		}
 		/* convert to fixed point and apply sensitivity correction for
 		   Z-axis */
-		zAxisfixed =
+		axisFixed =
 		    (short) ((unsigned short) data[5] +
 			     (unsigned short) data[4] * 256);
-		/* scale up by 1.122 (320/285) */
-		zAxisfixed = (short) (zAxisfixed * 9) >> 3;
-		data[4] = zAxisfixed >> 8;
-		data[5] = zAxisfixed & 0xFF;
+		/* scale up by 1.125 (36/32) approximate of 1.122 (320/285) */
+		axisFixed = (short) (axisFixed * 36);
+		data[4] = axisFixed >> 8;
+		data[5] = axisFixed & 0xFF;
 
-//		pr_err("Tandi read mpl mag = %x,%x,%x,%x,%x,%x", data[0], data[1], data[2],data[3],data[4],data[5]);
+		axisFixed =
+		    (short) ((unsigned short) data[3] +
+			     (unsigned short) data[2] * 256);
+		axisFixed = (short) (axisFixed * 32);
+		data[2] = axisFixed >> 8;
+		data[3] = axisFixed & 0xFF;
+
+		axisFixed =
+		    (short) ((unsigned short) data[1] +
+			     (unsigned short) data[0] * 256);
+		axisFixed = (short) (axisFixed * 32);
+		data[0] = axisFixed >> 8;
+		data[1] = axisFixed & 0xFF;
 
 		/* trigger next measurement read */
 		result =
@@ -230,16 +199,17 @@ int lsm303dlhm_read(void *mlsl_handle,
 					  LSM_REG_MODE, LSM_MODE_SINGLE);
 		ERROR_CHECK(result);
 
-//		pr_err("Tandi mpl mag read dada not ready !!!");
-
 		return ML_ERROR_COMPASS_DATA_NOT_READY;
 	}
 }
 
 struct ext_slave_descr lsm303dlhm_descr = {
+	/*.init             = */ NULL,
+	/*.exit             = */ NULL,
 	/*.suspend          = */ lsm303dlhm_suspend,
 	/*.resume           = */ lsm303dlhm_resume,
 	/*.read             = */ lsm303dlhm_read,
+	/*.config           = */ NULL,
 	/*.name             = */ "lsm303dlhm",
 	/*.type             = */ EXT_SLAVE_TYPE_COMPASS,
 	/*.id               = */ COMPASS_ID_LSM303,
@@ -253,10 +223,7 @@ struct ext_slave_descr *lsm303dlhm_get_slave_descr(void)
 {
 	return &lsm303dlhm_descr;
 }
-
-#ifdef __KERNEL__
 EXPORT_SYMBOL(lsm303dlhm_get_slave_descr);
-#endif
 
 /**
  *  @}

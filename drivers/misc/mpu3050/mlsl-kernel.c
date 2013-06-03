@@ -39,7 +39,7 @@
  *              The COM port number associated with the device in use.
  *  @return ML_SUCCESS if successful, a non-zero error code otherwise.
  */
-tMLError MLSLSerialOpen(char const *port, void ** sl_handle)
+tMLError MLSLSerialOpen(char const *port, void **sl_handle)
 {
 	return ML_SUCCESS;
 }

@@ -1,20 +1,7 @@
 /*
  $License:
     Copyright (C) 2010 InvenSense Corporation, All Rights Reserved.
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-  $
+ $
  */
 
 /**
@@ -96,14 +83,17 @@ int adxl346_resume(void *mlsl_handle,
 	/* Full Scale */
 	reg = 0x04;
 	reg &= ~ACCEL_ADI346_CTRL_MASK;
-	if (slave->range.mantissa == 2)
-		reg |= 0x0;
-	else if (slave->range.mantissa == 4)
+	if (slave->range.mantissa == 4)
 		reg |= 0x1;
 	else if (slave->range.mantissa == 8)
 		reg |= 0x2;
 	else if (slave->range.mantissa == 16)
 		reg |= 0x3;
+	else {
+		slave->range.mantissa = 2;
+		reg |= 0x0;
+	}
+	slave->range.fraction = 0;
 
 	/* DATA_FORMAT: full resolution of +/-2g; data is left justified */
 	result = MLSLSerialWriteSingle(mlsl_handle, pdata->address, 0x31, reg);
@@ -130,9 +120,12 @@ int adxl346_read(void *mlsl_handle,
 }
 
 struct ext_slave_descr adxl346_descr = {
+	/*.init             = */ NULL,
+	/*.exit             = */ NULL,
 	/*.suspend          = */ adxl346_suspend,
 	/*.resume           = */ adxl346_resume,
 	/*.read             = */ adxl346_read,
+	/*.config           = */ NULL,
 	/*.name             = */ "adx1346",
 	/*.type             = */ EXT_SLAVE_TYPE_ACCELEROMETER,
 	/*.id               = */ ACCEL_ID_ADI346,
@@ -146,10 +139,7 @@ struct ext_slave_descr *adxl346_get_slave_descr(void)
 {
 	return &adxl346_descr;
 }
-
-#ifdef __KERNEL__
 EXPORT_SYMBOL(adxl346_get_slave_descr);
-#endif
 
 /**
  *  @}
