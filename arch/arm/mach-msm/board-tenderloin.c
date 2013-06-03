@@ -108,6 +108,10 @@
 #include <linux/mfd/wm8994/core.h>
 #endif
 
+#ifdef CONFIG_INPUT_CYPRESS_CY8C20236A
+#include <linux/i2c/cy8c20236a.h>
+#endif
+
 #ifdef CONFIG_USB_G_ANDROID
 #include <linux/usb/android_composite.h>
 #endif
@@ -1701,6 +1705,33 @@ static struct i2c_board_info __initdata isl29023_i2c_board_info[] = {
     },
 };
 
+#ifdef CONFIG_INPUT_CYPRESS_CY8C20236A
+static int get_ps_gpio_pin_configuration(u8 type)
+{
+	int pin = -1;
+	if (type == GPIO_INT_TYPE)
+	{
+		pin = boardtype_is_3g() ? 39 : 136;// maybe here is a problem, reset_pin = 40?
+	}
+	else if (type == GPIO_RESET_TYPE)
+	{
+		pin = boardtype_is_3g() ? 85 : 36;
+	}
+	return pin;
+}
+
+struct  cypress_cy8c20236a_platform_data cypress_cy8c20236a_pdata = {
+	.reset_pin = get_ps_gpio_pin_configuration,
+	.p_out = get_ps_gpio_pin_configuration,
+};
+
+static struct i2c_board_info __initdata cy8c20236a_i2c_info[] = {
+	{
+		I2C_BOARD_INFO("cy8c20236a", 0x22), //i2c slave addree can be changed ;
+		.platform_data = &cypress_cy8c20236a_pdata,
+	},
+};
+#endif
 
 #ifdef A6_INTERNAL_WAKE
 struct a6_internal_wake_interface_data {
@@ -4731,6 +4762,15 @@ static struct i2c_registry msm8x60_i2c_devices[] __initdata = {
 		ARRAY_SIZE(lm8502_board_info),
 	},
 #endif
+#ifdef CONFIG_INPUT_CYPRESS_CY8C20236A
+	{
+		I2C_TENDERLOIN,
+		MSM_GSBI3_QUP_I2C_BUS_ID,
+		cy8c20236a_i2c_info,
+		ARRAY_SIZE(cy8c20236a_i2c_info),
+	},
+#endif
+
 };
 #endif /* CONFIG_I2C */
 
@@ -4786,6 +4826,13 @@ static void __init register_i2c_devices(void)
     /* Run the array and install devices as appropriate */
 	for (i = 0; i < ARRAY_SIZE(msm8x60_i2c_devices); ++i) {
 		if (msm8x60_i2c_devices[i].machs & mach_mask)
+
+			if (!strcmp(msm8x60_i2c_devices[i].info->type,"cy8c20236a")) {
+				if (boardtype_is_3g() && (board_type > TOPAZ_3G_DVT)) {
+					msm8x60_i2c_devices[i].bus = MSM_GSBI9_QUP_I2C_BUS_ID;
+				}
+			}
+
 			i2c_register_board_info(msm8x60_i2c_devices[i].bus,
 						msm8x60_i2c_devices[i].info,
 						msm8x60_i2c_devices[i].len);
