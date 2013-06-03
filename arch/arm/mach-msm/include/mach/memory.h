@@ -22,6 +22,10 @@
 #define MAX_PHYSMEM_BITS 32
 #define SECTION_SIZE_BITS 28
 
+#if defined(CONFIG_KEXEC_HARDBOOT) && defined(CONFIG_MACH_TENDERLOIN)
+#define KEXEC_HB_PAGE_ADDR 0x7ffff000
+#endif
+
 /* Certain configurations of MSM7x30 have multiple memory banks.
 *  One or more of these banks can contain holes in the memory map as well.
 *  These macros define appropriate conversion routines between the physical
