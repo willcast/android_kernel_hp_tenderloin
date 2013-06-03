@@ -27,12 +27,9 @@
  *
  */
 
-#include <linux/delay.h>
+#include <linux/kernel.h>
 #include <linux/i2c.h>
 #include "mpu.h"
-#define MPU_I2C_RETRY_ENABLE 1
-#define MPU_I2C_RETRY_TIMES 10
-#define MPU_I2C_DELAY_TIMES_MS 10
 
 int sensor_i2c_write(struct i2c_adapter *i2c_adap,
 		     unsigned char address,
@@ -40,7 +37,6 @@ int sensor_i2c_write(struct i2c_adapter *i2c_adap,
 {
 	struct i2c_msg msgs[1];
 	int res;
-	int i;
 
 	if (NULL == data || NULL == i2c_adap)
 		return -EINVAL;
@@ -50,26 +46,11 @@ int sensor_i2c_write(struct i2c_adapter *i2c_adap,
 	msgs[0].buf = (unsigned char *) data;
 	msgs[0].len = len;
 
-#if MPU_I2C_RETRY_ENABLE
-		for (i = 0; i < MPU_I2C_RETRY_TIMES; i++) {
-			res = i2c_transfer(i2c_adap, msgs, 1);
-			if (res < 1) {
-				printk(KERN_ERR "I2c Slave address: %x,\
-				sensor_i2c_write fail,\
-				retry:%d\n", address, i);
-				mdelay(MPU_I2C_DELAY_TIMES_MS);
-			} else
-				return 0;
-
-		}
-		return res;
-#else
 	res = i2c_transfer(i2c_adap, msgs, 1);
 	if (res < 1)
 		return res;
 	else
 		return 0;
-#endif
 }
 
 int sensor_i2c_write_register(struct i2c_adapter *i2c_adap,
@@ -90,7 +71,6 @@ int sensor_i2c_read(struct i2c_adapter *i2c_adap,
 {
 	struct i2c_msg msgs[2];
 	int res;
-	int i;
 
 	if (NULL == data || NULL == i2c_adap)
 		return -EINVAL;
@@ -105,26 +85,11 @@ int sensor_i2c_read(struct i2c_adapter *i2c_adap,
 	msgs[1].buf = data;
 	msgs[1].len = len;
 
-#if MPU_I2C_RETRY_ENABLE
-		for (i = 0; i < MPU_I2C_RETRY_TIMES; i++) {
-			res = i2c_transfer(i2c_adap, msgs, 2);
-			if (res < 2) {
-				printk(KERN_ERR "I2c Slave address: %x,\
-				sensor_i2c_read fail,\
-				retry:%d\n", address, i);
-				mdelay(MPU_I2C_DELAY_TIMES_MS);
-			} else
-				return 0;
-
-		}
-		return res;
-#else
 	res = i2c_transfer(i2c_adap, msgs, 2);
 	if (res < 2)
 		return res;
 	else
 		return 0;
-#endif
 }
 
 int mpu_memory_read(struct i2c_adapter *i2c_adap,
@@ -138,7 +103,6 @@ int mpu_memory_read(struct i2c_adapter *i2c_adap,
 
 	struct i2c_msg msgs[4];
 	int ret;
-	int i;
 
 	if (NULL == data || NULL == i2c_adap)
 		return -EINVAL;
@@ -156,11 +120,29 @@ int mpu_memory_read(struct i2c_adapter *i2c_adap,
 	msgs[0].flags = 0;
 	msgs[0].buf = bank;
 	msgs[0].len = sizeof(bank);
+    // HP Wade
+/*    ret = i2c_transfer(i2c_adap, msgs, 1);
+    if (ret < 1) {
+        pr_err("######### Wade: mpu_memory_read i2c_transfer 1 write failed: res : %d\n", ret );
+        return ret;
+    } else {
+        //pr_err("######### Wade: mpu_memory_read i2c_transfer write 1 OK: res : %d\n", ret );
+    }
+*/    // End
 
 	msgs[1].addr = mpu_addr;
 	msgs[1].flags = 0;
 	msgs[1].buf = addr;
 	msgs[1].len = sizeof(addr);
+    // HP Wade
+ /*   ret = i2c_transfer(i2c_adap, &msgs[1], 1);
+    if (ret < 1) {
+        pr_err("######### Wade: mpu_memory_read i2c_transfer 2 write failed: res : %d\n", ret );
+        return ret;
+    } else {
+        //pr_err("######### Wade: mpu_memory_read i2c_transfer write 2 OK: res : %d\n", ret );
+    }
+*/    // End
 
 	msgs[2].addr = mpu_addr;
 	msgs[2].flags = 0;
@@ -171,27 +153,24 @@ int mpu_memory_read(struct i2c_adapter *i2c_adap,
 	msgs[3].flags = I2C_M_RD;
 	msgs[3].buf = data;
 	msgs[3].len = len;
-
-#if MPU_I2C_RETRY_ENABLE
-		for (i = 0; i < MPU_I2C_RETRY_TIMES; i++) {
-			ret = i2c_transfer(i2c_adap, msgs, 4);
-			if (ret != 4) {
-				printk(KERN_ERR "I2c Slave address: %x,\
-				mpu_memory_read,\
-				retry:%d\n", mpu_addr, i);
-				mdelay(MPU_I2C_DELAY_TIMES_MS);
-			} else
-				return 0;
-
-		}
-		return ret;
-#else
+    // HP Wade
+/*    ret = i2c_transfer(i2c_adap, &msgs[2], 2);
+    if (ret < 2) {
+        pr_err("######### Wade: mpu_memory_read i2c_transfer  read failed: res : %d\n", ret );
+        return ret;
+    } else {
+        //pr_err("######### Wade: mpu_memory_read i2c_transfer read  OK: res : %d\n", ret );
+        return 0;
+    }
+*/
+//    #if 0
 	ret = i2c_transfer(i2c_adap, msgs, 4);
 	if (ret != 4)
 		return ret;
 	else
 		return 0;
-#endif
+//    #endif
+    // End
 }
 
 int mpu_memory_write(struct i2c_adapter *i2c_adap,
@@ -205,7 +184,6 @@ int mpu_memory_write(struct i2c_adapter *i2c_adap,
 
 	struct i2c_msg msgs[3];
 	int ret;
-	int i;
 
 	if (NULL == data || NULL == i2c_adap)
 		return -EINVAL;
@@ -227,36 +205,54 @@ int mpu_memory_write(struct i2c_adapter *i2c_adap,
 	msgs[0].buf = bank;
 	msgs[0].len = sizeof(bank);
 
+    // HP Wade
+/*    ret = i2c_transfer(i2c_adap, msgs, 1);
+    if (ret < 1) {
+        pr_err("######### Wade: mpu_memory_write i2c_transfer 1 write failed: res : %d\n", ret );
+        return ret ;
+    } else {
+        //pr_err("######### Wade: mpu_memory_write i2c_transfer write 1 OK: res : %d\n", ret );
+    }
+*/    // End
 	msgs[1].addr = mpu_addr;
 	msgs[1].flags = 0;
 	msgs[1].buf = addr;
 	msgs[1].len = sizeof(addr);
 
+    // HP Wade
+/*    ret = i2c_transfer(i2c_adap, &msgs[1], 1);
+    if (ret < 1) {
+        pr_err("######### Wade: mpu_memory_write i2c_transfer 2 write failed: res : %d\n", ret );
+        return ret ;
+    } else {
+        //pr_err("######### Wade: mpu_memory_write i2c_transfer write 2 OK: res : %d\n", ret );
+    }
+*/    // End
 	msgs[2].addr = mpu_addr;
 	msgs[2].flags = 0;
 	msgs[2].buf = (unsigned char *) buf;
 	msgs[2].len = len + 1;
-
-#if MPU_I2C_RETRY_ENABLE
-		for (i = 0; i < MPU_I2C_RETRY_TIMES; i++) {
-			ret = i2c_transfer(i2c_adap, msgs, 3);
-			if (ret != 3) {
-				printk(KERN_ERR "I2c Slave address: %x,\
-				mpu_memory_write,\
-				retry:%d\n", mpu_addr, i);
-				mdelay(MPU_I2C_DELAY_TIMES_MS);
-			} else
-				return 0;
-
-		}
-		return ret;
-#else
+    // HP Wade
+/*    ret = i2c_transfer(i2c_adap, &msgs[2], 1);
+    if (ret < 1)
+    {
+        pr_err("######### Wade: mpu_memory_write i2c_transfer 3 write failed: res : %d\n", ret );
+        return ret;
+    }
+    else
+    {
+        //pr_err("######### Wade: mpu_memory_write i2c_transfer 3 write failed: res : %d\n", ret );
+        return 0;
+    }
+*/
+//    #if 0
 	ret = i2c_transfer(i2c_adap, msgs, 3);
 	if (ret != 3)
 		return ret;
 	else
 		return 0;
-#endif
+//    #endif
+    // End
 }
 
 /**

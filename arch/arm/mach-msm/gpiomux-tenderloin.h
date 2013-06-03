@@ -140,6 +140,7 @@ extern struct msm_gpiomux_configs tenderloin_3g_dvt_gpiomux_cfgs[] __initdata;
 /* gyro */
 #define TENDERLOIN_GYRO_INT		125
 #define TENDERLOIN_GYRO_INT_3G		75
+#define TENDERLOIN_GYRO_FSYNC		119
 
 /* G-sensor */
 #define TENDERLOIN_GSENS_INT		124
@@ -202,6 +203,7 @@ enum tenderloin_pins {
 	VOL_UP_GPIO_PIN,
 	VOL_DN_GPIO_PIN,
 	TENDERLOIN_GPIO_3G_3V3_EN,
+	GYRO_FSYNC_PIN,
 	NUM_TOPAZ_PINS
 };
 
@@ -229,6 +231,7 @@ static int tenderloin_pins_wifi [] = {
 	[VOL_UP_GPIO_PIN] = VOL_UP_GPIO,
 	[VOL_DN_GPIO_PIN] = VOL_DN_GPIO,
 	[TENDERLOIN_GPIO_3G_3V3_EN] = GPIO_3G_3V3_EN,
+	[GYRO_FSYNC_PIN] = TENDERLOIN_GYRO_FSYNC,
 };
 
 static int tenderloin_pins_3g [] = {
@@ -255,6 +258,7 @@ static int tenderloin_pins_3g [] = {
 	[VOL_UP_GPIO_PIN] = VOL_UP_GPIO_3G,
 	[VOL_DN_GPIO_PIN] = VOL_DN_GPIO_3G,
 	[TENDERLOIN_GPIO_3G_3V3_EN] = GPIO_3G_3V3_EN,
+	[GYRO_FSYNC_PIN] = TENDERLOIN_GYRO_FSYNC,
 };
 
 static int tenderloin_pins_wifi_dvt [] = {
@@ -281,6 +285,7 @@ static int tenderloin_pins_wifi_dvt [] = {
 	[VOL_UP_GPIO_PIN] = VOL_UP_GPIO,
 	[VOL_DN_GPIO_PIN] = VOL_DN_GPIO,
 	[TENDERLOIN_GPIO_3G_3V3_EN] = GPIO_3G_3V3_EN,
+	[GYRO_FSYNC_PIN] = TENDERLOIN_GYRO_FSYNC,
 };
 
 static int tenderloin_pins_3g_evt4[] = {
@@ -307,6 +312,7 @@ static int tenderloin_pins_3g_evt4[] = {
 	[VOL_UP_GPIO_PIN] = VOL_UP_GPIO_3G,
 	[VOL_DN_GPIO_PIN] = VOL_DN_GPIO_3G,
 	[TENDERLOIN_GPIO_3G_3V3_EN] = GPIO_3G_3V3_EN,
+	[GYRO_FSYNC_PIN] = TENDERLOIN_GYRO_FSYNC,
 };
 
 
@@ -334,6 +340,7 @@ static int tenderloin_pins_3g_dvt [] = {
 	[VOL_UP_GPIO_PIN] = VOL_UP_GPIO_3G,
 	[VOL_DN_GPIO_PIN] = VOL_DN_GPIO_3G,
 	[TENDERLOIN_GPIO_3G_3V3_EN] = GPIO_3G_3V3_EN_DVT,
+	[GYRO_FSYNC_PIN] = TENDERLOIN_GYRO_FSYNC,
 };
 
 #endif

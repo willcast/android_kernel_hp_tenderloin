@@ -41,6 +41,7 @@
 #include <linux/i2c/lsm303dlh.h>
 #include <linux/mpu.h>
 #include <linux/isl29023.h>
+#include <linux/hp_sensors.h>
 
 #ifdef CONFIG_ANDROID_PMEM
 #include <linux/android_pmem.h>
@@ -130,7 +131,6 @@
 #include <linux/reboot.h>
 #include <linux/mdmgpio.h>
 #include <mach/htc_usb.h>
-
 
 #ifdef CONFIG_MAX8903B_CHARGER
 static unsigned max8903b_ps_connected = 0;
@@ -1622,23 +1622,21 @@ static struct isl29023_platform_data isl29023_pdata = {
 };
 
 static struct lsm303dlh_acc_platform_data lsm303dlh_acc_pdata = {
-	.poll_interval = 200,
+	.poll_interval = 50,
 	.min_interval = 10,
-	.g_range = LSM303DLH_ACC_G_2G,
+	.g_range = LSM303DLH_G_2G,
 	.axis_map_x = 0,
 	.axis_map_y = 1,
 	.axis_map_z = 2,
 	.negate_x = 0,
 	.negate_y = 0,
 	.negate_z = 0,
-	.gpio_int1 = -1,
-	.gpio_int2 = -1,
 };
 
 static struct lsm303dlh_mag_platform_data lsm303dlh_mag_pdata = {
-	.poll_interval = 200,
+	.poll_interval = 50,
 	.min_interval = 10,
-	.h_range = LSM303DLH_MAG_H_4_0G,
+	.h_range = LSM303DLH_H_8_1G,
 	.axis_map_x = 0,
 	.axis_map_y = 1,
 	.axis_map_z = 2,
@@ -1649,31 +1647,40 @@ static struct lsm303dlh_mag_platform_data lsm303dlh_mag_pdata = {
 
 static struct mpu3050_platform_data mpu_pdata = {
 	.int_config  = 0x10,
-	.orientation = {  -1,  0,  0,
-			           0,  1,  0,
-			           0,  0, -1 },
-    /* accel */
+	.orientation = {   1,  0,  0,
+			   0,  1,  0,
+			   0,  0,  1 },
+	.level_shifter = 0,
 	.accel = {
-		 .get_slave_descr = get_accel_slave_descr,
-		 .adapt_num   = 0,
-		 .bus         = EXT_SLAVE_BUS_SECONDARY,
-		 .address     = 0x18,
-		 .orientation = {  -1,  0,  0,
-		         		    0,  1,  0,
-				            0,  0, -1 },
+		.get_slave_descr = get_accel_slave_descr,
+		.adapt_num   = 0,
+		.bus         = EXT_SLAVE_BUS_SECONDARY,
+		.address     = 0x18,
+		.orientation = {  -1,  0,  0,
+				   0,  1,  0,
+				   0,  0, -1 },
 	 },
+	.compass = {
+		.get_slave_descr = get_compass_slave_descr,
+		.adapt_num   = 0,
+		.bus         = EXT_SLAVE_BUS_PRIMARY,
+		.address     = 0x1E,
+		.orientation = { -1,  0,  0,
+		                  0,  1,  0,
+		                  0,  0, -1 },
+	},
 };
 
 static struct i2c_board_info __initdata lsm303dlh_acc_i2c_board_info[] = {
     {
-        I2C_BOARD_INFO ( "lsm303dlh_acc_sysfs", 0x18),
+        I2C_BOARD_INFO ( HP_GSENSOR_NAME, 0x18),
         .platform_data = &lsm303dlh_acc_pdata,
     },
 };
 
 static struct i2c_board_info __initdata lsm303dlh_mag_i2c_board_info[] = {
     {
-        I2C_BOARD_INFO ( "lsm303dlh_mag_sysfs", 0x1e),
+        I2C_BOARD_INFO ( HP_MAGNETIC_NAME, 0x1e),
         .platform_data = &lsm303dlh_mag_pdata,
     },
 };
@@ -4740,11 +4747,20 @@ static void fixup_i2c_configs(void)
 	else
 		pm8901_vreg_init_pdata[PM8901_VREG_ID_MPP0].active_high = 1;
 
-#ifdef CONFIG_INPUT_LSM303DLH
 	if (machine_is_tenderloin() && boardtype_is_3g()) {
-		lsm303dlh_acc_pdata.negate_x = 1;
-	}
+#ifdef CONFIG_INPUT_LSM303DLH
+		lsm303dlh_acc_pdata.negate_y = 1;
+		lsm303dlh_acc_pdata.negate_z = 1;
+		lsm303dlh_mag_pdata.negate_y = 1;
+		lsm303dlh_mag_pdata.negate_z = 1;
 #endif
+		mpu_pdata.orientation[0] = -mpu_pdata.orientation[0];
+		mpu_pdata.orientation[8] = -mpu_pdata.orientation[8];
+		mpu_pdata.accel.orientation[0] = -mpu_pdata.orientation[0];
+		mpu_pdata.accel.orientation[8] = -mpu_pdata.orientation[8];
+		mpu_pdata.compass.orientation[0] = -mpu_pdata.orientation[0];
+		mpu_pdata.compass.orientation[8] = -mpu_pdata.orientation[8];
+	}
 #endif
 }
 
@@ -4910,14 +4926,24 @@ static uint32_t tenderloin_tlmm_cfgs[] = {
 
 	/* Touch reset */
 	GPIO_CFG(MXT1386_TS_PWR_RST_GPIO, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_16MA),
+
+	/* MPU3050 */
+	GPIO_CFG(TENDERLOIN_GYRO_INT,   0, GPIO_CFG_INPUT,  GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+	GPIO_CFG(TENDERLOIN_GYRO_FSYNC, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
 };
 
 static void __init msm8x60_init_tlmm(void)
 {
 	unsigned n;
-
 	for (n = 0; n < ARRAY_SIZE(tenderloin_tlmm_cfgs); ++n)
 		gpio_tlmm_config(tenderloin_tlmm_cfgs[n], 0);
+
+	/* MPU3050 */
+	if (gpio_request(TENDERLOIN_GYRO_FSYNC, "MPU3050_FSYNC")) {
+		pr_err("%s: MPU3050_GPIO_FSYNC request failed\n", __func__);
+		return;
+	}
+	gpio_direction_output(TENDERLOIN_GYRO_FSYNC, 0);
 }
 
 /*WLAN*/

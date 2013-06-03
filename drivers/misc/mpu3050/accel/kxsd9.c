@@ -1,7 +1,20 @@
 /*
  $License:
     Copyright (C) 2010 InvenSense Corporation, All Rights Reserved.
- $
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  $
  */
 
 /**
@@ -36,7 +49,7 @@
 /* --------------------- */
 
 /*****************************************
- * Accelerometer Initialization Functions
+    Accelerometer Initialization Functions
 *****************************************/
 
 static int kxsd9_suspend(void *mlsl_handle,
@@ -67,20 +80,15 @@ static int kxsd9_resume(void *mlsl_handle,
 	reg = 0x0;
 	reg &= ~ACCEL_KIONIX_CTRL_MASK;
 	reg |= 0x00;
-	if (slave->range.mantissa == 4) {	/* 4g scale = 4.9951 */
-		reg |= 0x2;
-		slave->range.fraction = 9951;
-	} else if (slave->range.mantissa == 7) { /* 6g scale = 7.5018 */
-		reg |= 0x1;
-		slave->range.fraction = 5018;
-	} else if (slave->range.mantissa == 9) {	/* 8g scale = 9.9902 */
-		reg |= 0x0;
-		slave->range.fraction = 9902;
-	} else {
-		slave->range.mantissa = 2; /* 2g scale = 2.5006 */
-		slave->range.fraction = 5006;
+	if (slave->range.mantissa == 2)	/* 2g scale = 2.5006 */
 		reg |= 0x3;
-	}
+	else if (slave->range.mantissa == 4) /* 4g scale = 4.9951 */
+		reg |= 0x2;
+	else if (slave->range.mantissa == 7) /* 6g scale = 7.5018 */
+		reg |= 0x1;
+	else if (slave->range.mantissa == 9) /* 8g scale = 9.9902 */
+		reg |= 0x0;
+
 	reg |= 0xC0;		/* 100Hz LPF */
 	result =
 	    MLSLSerialWriteSingle(mlsl_handle, pdata->address,
@@ -103,12 +111,9 @@ static int kxsd9_read(void *mlsl_handle,
 }
 
 static struct ext_slave_descr kxsd9_descr = {
-	/*.init             = */ NULL,
-	/*.exit             = */ NULL,
 	/*.suspend          = */ kxsd9_suspend,
 	/*.resume           = */ kxsd9_resume,
 	/*.read             = */ kxsd9_read,
-	/*.config           = */ NULL,
 	/*.name             = */ "kxsd9",
 	/*.type             = */ EXT_SLAVE_TYPE_ACCELEROMETER,
 	/*.id               = */ ACCEL_ID_KXSD9,
@@ -122,7 +127,10 @@ struct ext_slave_descr *kxsd9_get_slave_descr(void)
 {
 	return &kxsd9_descr;
 }
+
+#ifdef __KERNEL__
 EXPORT_SYMBOL(kxsd9_get_slave_descr);
+#endif
 
 /**
  *  @}

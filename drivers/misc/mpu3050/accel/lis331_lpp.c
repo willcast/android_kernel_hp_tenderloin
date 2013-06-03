@@ -23,8 +23,9 @@
  *              connected to the secondary I2C interface of the gyroscope.
  *
  *  @{
- *      @file   lis331.c
+ *      @file   lis331_lpp.c
  *      @brief  Accelerometer setup and handling methods for ST LIS331
+ *      Configures the lis331 for low power pedometer.
  */
 
 /* ------------------ */
@@ -80,9 +81,9 @@
     Accelerometer Initialization Functions
 *****************************************/
 
-int lis331dlh_suspend(void *mlsl_handle,
-		      struct ext_slave_descr *slave,
-		      struct ext_slave_platform_data *pdata)
+static int lis331dlh_suspend(void *mlsl_handle,
+			     struct ext_slave_descr *slave,
+			     struct ext_slave_platform_data *pdata)
 {
 	int result;
 
@@ -103,20 +104,21 @@ int lis331dlh_suspend(void *mlsl_handle,
 	return result;
 }
 
-int lis331dlh_resume(void *mlsl_handle,
-		     struct ext_slave_descr *slave,
-		     struct ext_slave_platform_data *pdata)
+static int lis331dlh_resume(void *mlsl_handle,
+			    struct ext_slave_descr *slave,
+			    struct ext_slave_platform_data *pdata)
 {
 	int result = ML_SUCCESS;
 	unsigned char reg;
 
 	result = MLSLSerialWriteSingle(mlsl_handle, pdata->address,
-				       ACCEL_ST_CTRL_REG1, 0x37);
+				       ACCEL_ST_CTRL_REG1, 0x27);
 	ERROR_CHECK(result);
 	MLOSSleep(500);
 
-	/* Full Scale */
 	reg = 0x40;
+
+	/* Full Scale */
 	reg &= ~ACCEL_ST_CTRL_MASK;
 	if (slave->range.mantissa == 2
 	    && slave->range.fraction == 480) {
@@ -134,7 +136,7 @@ int lis331dlh_resume(void *mlsl_handle,
 
 	/* Configure high pass filter */
 	result = MLSLSerialWriteSingle(mlsl_handle, pdata->address,
-				       ACCEL_ST_CTRL_REG2, 0x0F);
+				       ACCEL_ST_CTRL_REG2, 0x0f);
 	ERROR_CHECK(result);
 	result = MLSLSerialWriteSingle(mlsl_handle, pdata->address,
 				       ACCEL_ST_CTRL_REG3, 0x00);
@@ -152,15 +154,15 @@ int lis331dlh_resume(void *mlsl_handle,
 	return result;
 }
 
-int lis331dlh_read(void *mlsl_handle,
-		   struct ext_slave_descr *slave,
-		   struct ext_slave_platform_data *pdata,
-		   unsigned char *data)
+static int lis331dlh_read(void *mlsl_handle,
+			  struct ext_slave_descr *slave,
+			  struct ext_slave_platform_data *pdata,
+			  unsigned char *data)
 {
 	return ML_ERROR_FEATURE_NOT_IMPLEMENTED;
 }
 
-struct ext_slave_descr lis331dlh_descr = {
+static struct ext_slave_descr lis331dlh_descr = {
 	/*.suspend          = */ lis331dlh_suspend,
 	/*.resume           = */ lis331dlh_resume,
 	/*.read             = */ lis331dlh_read,
@@ -173,13 +175,13 @@ struct ext_slave_descr lis331dlh_descr = {
 	/*.range            = */ {2, 480},
 };
 
-struct ext_slave_descr *lis331dlh_get_slave_descr(void)
+struct ext_slave_descr *lis331dlh_lpp_get_slave_descr(void)
 {
 	return &lis331dlh_descr;
 }
 
 #ifdef __KERNEL__
-EXPORT_SYMBOL(lis331dlh_get_slave_descr);
+EXPORT_SYMBOL(lis331dlh_lpp_get_slave_descr);
 #endif
 
 /**

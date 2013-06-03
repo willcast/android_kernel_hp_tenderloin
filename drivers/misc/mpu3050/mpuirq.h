@@ -31,9 +31,14 @@
 #define MPUIRQ_SET_TIMEOUT           (5)
 #define MPUIRQ_SET_ACCEL_INFO        (6)
 #define MPUIRQ_SET_FREQUENCY_DIVIDER (7)
-#define MPUIRQ_GET_DEBUG_FLAG        (8)
 
-extern int mpu_debug_flag;
+struct mpuirq_data {
+	int interruptcount;
+	unsigned long long irqtime;
+	int data_type;
+	int data_size;
+	void *data;
+};
 
 #ifdef __KERNEL__
 
