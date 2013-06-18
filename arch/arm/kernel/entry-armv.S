@@ -740,6 +740,13 @@ ENTRY(__switch_to)
 	ldr	r6, [r2, #TI_CPU_DOMAIN]
 #endif
 	set_tls	r3, r4, r5
+
+	@ preserve TPIDRURW register state
+	get_tls2	r3, r4, r5
+	str	r3, [r1, #TI_TP2_VALUE]
+	ldr	r3, [r2, #TI_TP2_VALUE]
+	set_tls2	r3, r4, r5
+
 #if defined(CONFIG_CC_STACKPROTECTOR) && !defined(CONFIG_SMP)
 	ldr	r7, [r2, #TI_TASK]
 	ldr	r8, =__stack_chk_guard

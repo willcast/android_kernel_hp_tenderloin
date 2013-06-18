@@ -26,24 +26,63 @@
 	mov	\tmp1, #0xffff0fff
 	str	\tp, [\tmp1, #-15]		@ set TLS value at 0xffff0ff0
 	.endm
+
+	.macro set_tls2_none, tp2, tmp1, tmp2
+	.endm
+
+	.macro set_tls2_v6k, tp2, tmp1, tmp2
+	mcr	p15, 0, \tp2, c13, c0, 2		@ set TPIDRURW register
+	.endm
+
+	.macro set_tls2_v6, tp2, tmp1, tmp2
+	ldr	\tmp1, =elf_hwcap
+	ldr	\tmp1, [\tmp1, #0]
+	mov	\tmp2, #0xffff0fff
+	tst	\tmp1, #HWCAP_TLS		@ hardware TLS available?
+	mcrne	p15, 0, \tp2, c13, c0, 2		@ yes, set TPIDRURW register
+	.endm
+
+	.macro get_tls2_none, tp2, tmp1, tmp2
+	.endm
+
+	.macro get_tls2_v6k, tp2, tmp1, tmp2
+	mrc	p15, 0, \tp2, c13, c0, 2		@ get TPIDRURW register
+	.endm
+
+	.macro get_tls2_v6, tp2, tmp1, tmp2
+	ldr	\tmp1, =elf_hwcap
+	ldr	\tmp1, [\tmp1, #0]
+	mov	\tmp2, #0xffff0fff
+	tst	\tmp1, #HWCAP_TLS		@ hardware TLS available?
+	mrcne	p15, 0, \tp2, c13, c0, 2		@ yes, get TPIDRURW register
+	.endm
+
 #endif
 
 #ifdef CONFIG_TLS_REG_EMUL
 #define tls_emu		1
 #define has_tls_reg		1
 #define set_tls		set_tls_none
+#define set_tls2	set_tls2_none
+#define get_tls2	get_tls2_none
 #elif defined(CONFIG_CPU_V6)
 #define tls_emu		0
 #define has_tls_reg		(elf_hwcap & HWCAP_TLS)
 #define set_tls		set_tls_v6
+#define set_tls2	set_tls2_v6
+#define get_tls2	get_tls2_v6
 #elif defined(CONFIG_CPU_32v6K)
 #define tls_emu		0
 #define has_tls_reg		1
 #define set_tls		set_tls_v6k
+#define set_tls2	set_tls2_v6k
+#define get_tls2	get_tls2_v6k
 #else
 #define tls_emu		0
 #define has_tls_reg		0
 #define set_tls		set_tls_software
+#define set_tls2	set_tls2_none
+#define get_tls2	get_tls2_none
 #endif
 
 #endif	/* __ASMARM_TLS_H */
