@@ -44,6 +44,7 @@
 #include <linux/i2c/lsm303dlh.h>
 #include <linux/isl29023.h>
 #include <linux/reboot.h>
+#include <linux/memblock.h>
 
 #ifdef CONFIG_LEDS_LM8502
 #include <linux/i2c_lm8502_led.h>
@@ -3417,6 +3418,17 @@ static void __init tenderloin_init(void)
 
         tenderloin_init_keypad();
         //        tenderloin_init_wifi();
+
+#ifdef CONFIG_KEXEC_HARDBOOT
+	// Reserve space for hardboot page at the end of the first memory bank
+	struct membank* bank = &meminfo.bank[0];
+	phys_addr_t start = bank->start + bank->size - SZ_1M;
+	int ret = memblock_remove(start, SZ_1M);
+	if(!ret)
+		pr_info("Hardboot page reserved at 0x%X\n", start);
+	else
+		pr_err("Failed to reserve space for hardboot page at 0x%X!\n", start);
+#endif
 
         printk(KERN_ERR "%s: --\n", __func__);
 }
