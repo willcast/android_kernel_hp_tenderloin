@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35-palm
-# Fri Jan  3 10:59:25 2014
+# Fri Jan  3 15:41:25 2014
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -746,7 +746,7 @@ CONFIG_HRES_COUNTER=y
 # CONFIG_NDUID is not set
 CONFIG_USER_PINS=y
 # CONFIG_PINMUX is not set
-# CONFIG_KERNEL_LOG is not set
+CONFIG_KERNEL_LOG=y
 CONFIG_BLUETOOTH_POWER_STATE=y
 # CONFIG_LOW_MEMORY_NOTIFY is not set
 # CONFIG_PMIC8058_BATTALARM is not set

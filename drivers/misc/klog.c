@@ -33,6 +33,11 @@
 #include <asm/memory.h>
 #include <asm/io.h>
 
+#include <linux/platform_device.h>
+#include <linux/proc_fs.h>
+#include <linux/uaccess.h>
+#include <linux/io.h>
+
 #define MIN(a,b) ((a)<(b) ? (a):(b))
 
 #define KLOG_MAGIC 0x6b6c6f67 // 'klog'
@@ -64,6 +69,9 @@ static unsigned long klog_phys;
 static unsigned long klog_len;
 
 static char *klog_buffer;
+
+static unsigned long last_log_size;
+static char *last_log_buffer;
 
 static struct klog_header *klog;
 static struct klog_buffer_header *klog_buf;
@@ -148,6 +156,101 @@ void klog_write(const char *s, unsigned int count)
 	spin_unlock_irqrestore(&klog_lock, flags);
 }
 
+static ssize_t last_log_read(struct file *file, char __user *buf,
+				    size_t len, loff_t *offset)
+{
+	loff_t pos = *offset;
+	ssize_t count;
+
+	if (pos >= last_log_size)
+		return 0;
+
+	count = min(len, (size_t)(last_log_size - pos));
+	if (copy_to_user(buf, last_log_buffer + pos, count))
+		return -EFAULT;
+
+	*offset += count;
+	return count;
+}
+
+
+static const struct file_operations last_log_file_ops = {
+	.owner = THIS_MODULE,
+	.read = last_log_read,
+};
+
+void setup_last_log_proc_entry(void)
+{
+	struct proc_dir_entry *entry;
+	unsigned last_klog_num;
+	struct klog_buffer_header *last_klog_buf;
+	char *status_msg = NULL;
+
+	char invalid_msg[] = "***KLOG INVALID***\n\0";
+	char empty_msg[] = "***KLOG EMPTY***\n\0";
+
+	if (klog->current_buf == 0) {
+		last_klog_num = klog->buf_count - 1;
+	} else {
+		last_klog_num = klog->current_buf - 1;
+	}
+
+	last_klog_buf = get_kbuf(last_klog_num);
+
+	if (last_klog_buf->magic != KLOG_BUFFER_MAGIC) {
+		status_msg = invalid_msg;
+	}
+	else if (last_klog_buf->tail == last_klog_buf->head) {
+		status_msg = empty_msg;
+		return;
+	}
+	else if (last_klog_buf->head > last_klog_buf->tail) {
+		last_log_size = last_klog_buf->head - last_klog_buf->tail;
+	}
+	else {
+		last_log_size = last_klog_buf->len - 1;
+	}
+
+	if (status_msg) last_log_size = strlen(status_msg);
+
+	last_log_buffer = kmalloc(last_log_size, GFP_KERNEL);
+	if (last_log_buffer == NULL) {
+		printk(KERN_ERR
+		       "klog: failed to allocate buffer for last_klog\n");
+		last_log_size = 0;
+		return;
+	}
+
+	if (status_msg) {
+		memcpy(last_log_buffer, status_msg, last_log_size);
+	}
+	else if (last_klog_buf->head > last_klog_buf->tail) {
+		memcpy(last_log_buffer,
+				last_klog_buf->data + last_klog_buf->tail,
+				last_log_size);
+	}
+	else {
+		memcpy(last_log_buffer,
+				last_klog_buf->data + last_klog_buf->tail,
+				last_klog_buf->len - last_klog_buf->tail);
+		memcpy(last_log_buffer + (last_klog_buf->len - last_klog_buf->tail),
+				last_klog_buf->data,
+				last_klog_buf->head);
+	}
+
+	entry = create_proc_entry("last_klog", S_IFREG | S_IRUGO, NULL);
+
+	if (!entry) {
+		printk(KERN_ERR "klog: failed to create last_klog proc entry\n");
+		kfree(last_log_buffer);
+		last_log_buffer = NULL;
+		return;
+	}
+
+	entry->proc_fops = &last_log_file_ops;
+	entry->size = last_log_size;
+}
+
 static int __init klog_init(void)
 {
 	void *base;
@@ -183,6 +286,8 @@ static int __init klog_init(void)
 	klog_buf = get_kbuf(klog->current_buf);
 
 	klog_printf("welcome to klog, buffer at %p, length %d\n", klog_buf, klog_buf->len);
+	
+	setup_last_log_proc_entry();
 
 	return 0;
 }
