@@ -19,5 +19,5 @@
 #define __ARCH_ARM_MACH_MSM_DEVICES_TOPAZ_H
 
 extern struct platform_device tenderloin_fixed_reg_device[];
-
+	
 #endif

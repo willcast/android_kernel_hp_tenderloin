@@ -55,4 +55,3 @@ struct platform_device tenderloin_fixed_reg_device[] = {
 		}
 	},
 };
-

@@ -28,6 +28,10 @@ struct kimage;
 static inline void crash_setup_regs(struct pt_regs *newregs,
                                         struct pt_regs *oldregs) { }
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+extern void (*kexec_hardboot_hook)(void);
+#endif
+
 #endif /* __ASSEMBLY__ */
 
 #endif /* CONFIG_KEXEC */

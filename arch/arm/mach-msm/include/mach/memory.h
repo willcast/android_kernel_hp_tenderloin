@@ -22,8 +22,14 @@
 #define MAX_PHYSMEM_BITS 32
 #define SECTION_SIZE_BITS 28
 
-#if defined(CONFIG_KEXEC_HARDBOOT) && defined(CONFIG_MACH_TENDERLOIN)
-#define KEXEC_HB_PAGE_ADDR 0x7ffff000
+#ifdef CONFIG_KEXEC_HARDBOOT
+
+#ifdef CONFIG_MACH_TENDERLOIN
+#define KEXEC_HB_PAGE_ADDR 0x48C00000
+#else
+#error "Address for kexec hardboot page not defined"
+#endif
+
 #endif
 
 /* Certain configurations of MSM7x30 have multiple memory banks.

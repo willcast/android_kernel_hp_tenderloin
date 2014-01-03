@@ -25,6 +25,7 @@ extern unsigned long kexec_boot_atags;
 
 #ifdef CONFIG_KEXEC_HARDBOOT
 extern unsigned long kexec_hardboot;
+void (*kexec_hardboot_hook)(void);
 #endif
 
 /*
@@ -85,6 +86,12 @@ void machine_kexec(struct kimage *image)
 	local_fiq_disable();
 
 	setup_mm_for_reboot(0); /* mode is not used, so just pass 0*/
+	
+#ifdef CONFIG_KEXEC_HARDBOOT
+	/* Run any final machine-specific shutdown code. */
+	if (image->hardboot && kexec_hardboot_hook)
+		kexec_hardboot_hook();
+#endif
 
 	flush_cache_all();
 	cpu_proc_fin();

@@ -4,6 +4,14 @@
 
 #include <asm/kexec.h>
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+#include <asm/memory.h>
+
+#ifdef CONFIG_ARCH_MSM8X60
+#include <mach/msm_iomap.h>
+#endif
+
+#endif
 	.globl relocate_new_kernel
 relocate_new_kernel:
 
@@ -66,13 +74,13 @@ hardboot:
 	 *  4: kexec_start_address
 	 *  8: kexec_mach_type
 	 * 12: kexec_boot_atags */
-	ldr	r0, =0x7ffff000
+	ldr	r0, =KEXEC_HB_PAGE_ADDR
 	str	r1, [r0, #4]
 	ldr	r1, kexec_mach_type
 	str	r1, [r0, #8]
 	ldr	r1, kexec_boot_atags
 	str	r1, [r0, #12]
-	ldr	r1, =0x4a5db007
+	ldr	r1, =KEXEC_HB_PAGE_MAGIC
 	str	r1, [r0]
 
 #ifdef CONFIG_ARCH_MSM8X60
