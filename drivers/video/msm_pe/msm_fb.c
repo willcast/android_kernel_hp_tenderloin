@@ -997,6 +997,25 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 		var->transp.length = 8;
 		bpp = 4;
 		break;
+		
+	case MDP_BGRA_8888:
+		fix->type = FB_TYPE_PACKED_PIXELS;
+		fix->xpanstep = 1;
+		fix->ypanstep = 1;
+		var->vmode = FB_VMODE_NONINTERLACED;
+		var->blue.offset = 16;
+  		var->green.offset = 8;
+		var->red.offset = 0;
+		var->blue.length = 8;
+		var->green.length = 8;
+		var->red.length = 8;
+		var->blue.msb_right = 0;
+		var->green.msb_right = 0;
+		var->red.msb_right = 0;
+		var->transp.offset = 24;
+		var->transp.length = 8;
+		bpp = 4;
+		break;
 
 	case MDP_YCRYCB_H2V1:
 		/* ToDo: need to check TV-Out YUV422i framebuffer format */
@@ -1305,28 +1324,16 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	return ret;
 }
 
-/*jonpry: *HACK* something is trying to open us early. Probably v4l or some console remnant. 
-		Since it quickly decides to close us. This results in shutdown of the lcd
-		and boot anim, and ugly blankness on the screen. To fix this we simply fail
-		on the first open. Would be nice to just not be opened instead */
-static int first=0;
 static int msm_fb_open(struct fb_info *info, int user)
 {
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
 	int result;
-
-	if(first)
-	{
-		first = 0;
-		return -1;
-	}
 
 	result = pm_runtime_get_sync(info->dev);
 
 	if (result < 0) {
 		printk(KERN_ERR "pm_runtime: fail to wake up\n");
 	}
-
 
 	if (!mfd->ref_cnt) {
 		mdp_set_dma_pan_info(info, NULL, TRUE);
@@ -1575,10 +1582,14 @@ static int msm_fb_set_par(struct fb_info *info)
 		break;
 
 	case 32:
-		if (var->transp.offset == 24)
-			mfd->fb_imgType = MDP_ARGB_8888;
-		else
+		if (var->transp.offset == 24) {
+			if (var->red.offset == 16)
+				mfd->fb_imgType = MDP_BGRA_8888;
+			else
+				mfd->fb_imgType = MDP_ARGB_8888;
+		} else {
 			mfd->fb_imgType = MDP_RGBA_8888;
+		}
 		break;
 
 	default:
