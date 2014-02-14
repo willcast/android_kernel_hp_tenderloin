@@ -8,17 +8,21 @@
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02110-1301, USA.
  */
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/io.h>
 
 #include <mach/msm_iomap.h>
-#include <mach/scm.h>
 #include <mach/scm-io.h>
 
-#define SCM_IO_READ	0x1
-#define SCM_IO_WRITE	0x2
+#define SCM_IO_READ	((((0x5 << 10) | 0x1) << 12) | (0x2 << 8) | 0x1)
+#define SCM_IO_WRITE	((((0x5 << 10) | 0x2) << 12) | (0x2 << 8) | 0x2)
 
 #define BETWEEN(p, st, sz) ((p) >= (void __iomem *)(st) && \
 				(p) < ((void __iomem *)(st) + (sz)))
@@ -26,10 +30,22 @@
 
 static u32 __secure_readl(u32 addr)
 {
-	u32 r;
-	r = scm_call_atomic1(SCM_SVC_IO, SCM_IO_READ, addr);
+	u32 context_id;
+	register u32 r0 asm("r0") = SCM_IO_READ;
+	register u32 r1 asm("r1") = (u32)&context_id;
+	register u32 r2 asm("r2") = addr;
+	asm(
+		__asmeq("%0", "r0")
+		__asmeq("%1", "r0")
+		__asmeq("%2", "r1")
+		__asmeq("%3", "r2")
+		".arch_extension sec\n"
+		"smc    #0      @ switch to secure world\n"
+		: "=r" (r0)
+		: "r" (r0), "r" (r1), "r" (r2)
+	);
 	__iormb();
-	return r;
+	return r0;
 }
 
 u32 secure_readl(void __iomem *c)
@@ -45,8 +61,23 @@ EXPORT_SYMBOL(secure_readl);
 
 static void __secure_writel(u32 v, u32 addr)
 {
+	u32 context_id;
+	register u32 r0 asm("r0") = SCM_IO_WRITE;
+	register u32 r1 asm("r1") = (u32)&context_id;
+	register u32 r2 asm("r2") = addr;
+	register u32 r3 asm("r3") = v;
+
 	__iowmb();
-	scm_call_atomic2(SCM_SVC_IO, SCM_IO_WRITE, addr, v);
+	asm(
+		__asmeq("%0", "r0")
+		__asmeq("%1", "r1")
+		__asmeq("%2", "r2")
+		__asmeq("%3", "r3")
+		".arch_extension sec\n"
+		"smc    #0      @ switch to secure world\n"
+		: /* No return value */
+		: "r" (r0), "r" (r1), "r" (r2), "r" (r3)
+	);
 }
 
 void secure_writel(u32 v, void __iomem *c)
