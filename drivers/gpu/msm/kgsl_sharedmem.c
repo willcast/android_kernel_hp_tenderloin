@@ -13,6 +13,7 @@
 #include <linux/vmalloc.h>
 #include <linux/memory_alloc.h>
 #include <asm/cacheflush.h>
+#include <asm/highmem.h>
 
 #include "kgsl.h"
 #include "kgsl_sharedmem.h"
@@ -263,6 +264,10 @@ kgsl_sharedmem_init_sysfs(void)
 #ifdef CONFIG_OUTER_CACHE
 static void _outer_cache_range_op(int op, unsigned long addr, size_t size)
 {
+
+	if (size == 0)
+		return -EINVAL;
+
 	switch (op) {
 	case KGSL_CACHE_OP_FLUSH:
 		outer_flush_range(addr, addr + size);
@@ -390,16 +395,36 @@ void kgsl_cache_range_op(struct kgsl_memdesc *memdesc, int op)
 	void *addr = memdesc->hostptr;
 	int size = memdesc->size;
 
-	switch (op) {
-	case KGSL_CACHE_OP_FLUSH:
-		dmac_flush_range(addr, addr + size);
-		break;
-	case KGSL_CACHE_OP_CLEAN:
-		dmac_clean_range(addr, addr + size);
-		break;
-	case KGSL_CACHE_OP_INV:
-		dmac_inv_range(addr, addr + size);
-		break;
+	if (!addr) {
+		int i;
+		for (i = 0; i < memdesc->sglen; i++) {
+			struct page *p = sg_page(&memdesc->sg[i]);
+			void *ptr = kmap_atomic(p, KM_KGSL);
+			switch (op) {
+			case KGSL_CACHE_OP_FLUSH:
+				dmac_flush_range(addr, addr + size);
+				break;
+			case KGSL_CACHE_OP_CLEAN:
+				dmac_clean_range(addr, addr + size);
+				break;
+			case KGSL_CACHE_OP_INV:
+				dmac_inv_range(addr, addr + size);
+				break;
+			}
+			kunmap_atomic(ptr, KM_KGSL);
+		}
+	} else {
+		switch (op) {
+		case KGSL_CACHE_OP_FLUSH:
+			dmac_flush_range(addr, addr + size);
+			break;
+		case KGSL_CACHE_OP_CLEAN:
+			dmac_clean_range(addr, addr + size);
+			break;
+		case KGSL_CACHE_OP_INV:
+			dmac_inv_range(addr, addr + size);
+			break;
+		}
 	}
 
 	outer_cache_range_op_sg(memdesc->sg, memdesc->sglen, op);
