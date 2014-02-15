@@ -31,6 +31,10 @@
 #include <mach/scm-io.h>
 #include <mach/restart.h>
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+#include <asm/kexec.h>
+#endif
+
 #define CONFIG_WALL_MSG
 
 #define TCSR_WDT_CFG 0x30
@@ -406,6 +410,14 @@ static struct input_handler reboot_input_handler = {
 
 #endif
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+static void msm_kexec_hardboot_hook(void)
+{
+	// Set the PMICs to restart on power-off
+	pm8058_reset_pwr_off(1);
+	pm8901_reset_pwr_off(1);
+}
+#endif
 
 static int __init msm_restart_init(void)
 {
@@ -424,6 +436,10 @@ static int __init msm_restart_init(void)
 	restart_reason_addr = imem + RESTART_REASON_ADDR;
 #endif
 	pm_power_off = msm_power_off;
+
+#ifdef CONFIG_KEXEC_HARDBOOT
+	kexec_hardboot_hook = msm_kexec_hardboot_hook;
+#endif
 
 	return 0;
 }

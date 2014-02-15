@@ -6782,6 +6782,23 @@ static struct input_handler diag_input_handler = {
 	.id_table	= diag_ids,
 };
 
+#ifdef CONFIG_KEXEC_HARDBOOT
+static struct resource tenderloin_kexec_resources[] = {
+	[0] = {
+		.start	= KEXEC_HB_PAGE_ADDR,
+		.end	= KEXEC_HB_PAGE_ADDR + SZ_1M - 1,
+		.name	= "kexec-hb-page-resource",
+		.flags	= IORESOURCE_MEM,
+	},
+};
+	
+static struct platform_device tenderloin_kexec_device = {
+	.name			= "kexec-page-dummy-dev",
+	.id				= 0,
+	.num_resources	= ARRAY_SIZE(tenderloin_kexec_resources),
+	.resource		= tenderloin_kexec_resources,
+};
+#endif
 
 
 static void __init msm8x60_init(struct msm_board_data *board_data)
