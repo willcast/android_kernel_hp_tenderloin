@@ -274,6 +274,21 @@ kgsl_gem_alloc_memory(struct drm_gem_object *obj)
 	} else
 		return -EINVAL;
 
+	/* TODO would be good to cleanup in the error paths, but right now I
+	 * just need it to work enough to run some simple tests..
+	 */
+	result = kgsl_mmu_get_gpuaddr(priv->pagetable, &priv->memdesc);
+	if (result) {
+		DRM_ERROR("kgsl_mmu_get_gpuaddr failed.  result = %d\n", result);
+		return result;
+	}
+	result = kgsl_mmu_map(priv->pagetable, &priv->memdesc);
+	if (result) {
+		DRM_ERROR("kgsl_mmu_map failed.  result = %d\n", result);
+		kgsl_mmu_put_gpuaddr(priv->pagetable, &priv->memdesc);
+		return result;
+	}
+
 	for (index = 0; index < priv->bufcount; index++) {
 		priv->bufs[index].offset = index * obj->size;
 		priv->bufs[index].gpuaddr =
