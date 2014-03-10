@@ -295,6 +295,9 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 				policy->cpu, cur_freq);
 		return -EINVAL;
 	}
+	
+	/* don't cook the SoC just yet... */
+	policy->max = 1512000;
 
 	if (cur_freq != table[index].frequency) {
 		int ret = 0;
