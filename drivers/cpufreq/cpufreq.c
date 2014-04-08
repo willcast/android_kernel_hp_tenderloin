@@ -431,8 +431,79 @@ static ssize_t store_##file_name					\
 	return ret ? ret : count;					\
 }
 
-store_one(scaling_min_freq, min);
-store_one(scaling_max_freq, max);
+static ssize_t store_scaling_min_freq
+(struct cpufreq_policy *policy, const char *buf, size_t count)
+{							
+	unsigned int ret = -EINVAL;
+	struct cpufreq_policy new_policy;
+	int alt_cpu;
+
+	ret = cpufreq_get_policy(&new_policy, policy->cpu);
+	if (ret)
+		return -EINVAL;
+
+	ret = sscanf(buf, "%u", &new_policy.min);
+	if (ret != 1)
+		return -EINVAL;
+
+	ret = __cpufreq_set_policy(policy, &new_policy);
+	policy->user_policy.min = policy->min;
+
+	alt_cpu = policy->cpu ? 0 : 1;
+	if (!cpu_online(alt_cpu)) {	
+		cpu_up(alt_cpu);
+	}
+	ret = cpufreq_get_policy(&new_policy, alt_cpu);
+	if (!ret) {
+		struct cpufreq_policy* alt_policy=cpufreq_cpu_get(alt_cpu);
+		if (alt_policy != NULL) {
+			new_policy.min = policy->min;
+			__cpufreq_set_policy(alt_policy, &new_policy);
+			alt_policy->user_policy.min = alt_policy->min;
+			cpufreq_cpu_put(alt_policy);
+		}
+	}
+
+	return ret ? ret : count;
+}
+
+static ssize_t store_scaling_max_freq
+(struct cpufreq_policy *policy, const char *buf, size_t count)
+{							
+	unsigned int ret = -EINVAL;
+	struct cpufreq_policy new_policy;
+	int alt_cpu;
+
+	ret = cpufreq_get_policy(&new_policy, policy->cpu);
+	if (ret)
+		return -EINVAL;
+
+	ret = sscanf(buf, "%u", &new_policy.max);
+	if (ret != 1)
+		return -EINVAL;
+
+	ret = __cpufreq_set_policy(policy, &new_policy);
+	policy->user_policy.max = policy->max;
+
+	alt_cpu = policy->cpu ? 0 : 1;
+	if (!cpu_online(alt_cpu)) {	
+		cpu_up(alt_cpu);
+	}
+	ret = cpufreq_get_policy(&new_policy, alt_cpu);
+	if (!ret) {
+		struct cpufreq_policy* alt_policy=cpufreq_cpu_get(alt_cpu);
+		if (alt_policy != NULL) {
+			new_policy.max = policy->max;
+			__cpufreq_set_policy(alt_policy, &new_policy);
+			alt_policy->user_policy.max = alt_policy->max;
+			cpufreq_cpu_put(alt_policy);
+		}
+	}
+
+	return ret ? ret : count;
+}				
+//store_one(scaling_min_freq, min);
+//store_one(scaling_max_freq, max);
 
 /**
  * show_cpuinfo_cur_freq - current CPU frequency as detected by hardware
