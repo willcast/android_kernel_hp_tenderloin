@@ -853,7 +853,11 @@ static int __init acpuclk_8x60_probe(struct platform_device *pdev)
 
 	/* Improve boot time by ramping up CPUs immediately. */
 	for_each_online_cpu(cpu)
+#ifdef CONFIG_MACH_TENDERLOIN
+		acpuclk_8x60_set_rate(cpu, 1674000, SETRATE_INIT);
+#else
 		acpuclk_8x60_set_rate(cpu, max_freq->acpuclk_khz, SETRATE_INIT);
+#endif
 
 	acpuclk_register(&acpuclk_8x60_data);
 	cpufreq_table_init();

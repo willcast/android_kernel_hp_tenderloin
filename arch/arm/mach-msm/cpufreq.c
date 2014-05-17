@@ -296,6 +296,11 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 		return -EINVAL;
 	}
 
+#ifdef CONFIG_MACH_TENDERLOIN
+	/* set safe initial CPU frequency max */
+	policy->max = 1674000;
+#endif
+
 	if (cur_freq != table[index].frequency) {
 		int ret = 0;
 		ret = acpuclk_set_rate(policy->cpu, table[index].frequency,
