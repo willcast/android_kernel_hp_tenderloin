@@ -155,14 +155,11 @@
 #include <linux/msm_ion.h>
 #include <mach/ion.h>
 #include <mach/msm_rtb.h>
-
-struct pm8xxx_mpp_init_info {
-	unsigned			mpp;
-	struct pm8xxx_mpp_config_data	config;
-};
+#include <linux/msm_tsens.h>
 
 extern int ps_type;
 int *pin_table = NULL;
+int wm8994_reg_status = 0;
 
 #ifdef CONFIG_MAX8903B_CHARGER
 static unsigned max8903b_ps_connected = 0;
@@ -1370,7 +1367,6 @@ static struct msm_i2c_platform_data msm_gsbi10_qup_i2c_pdata = {
 	.src_clk_rate = 24000000,
 	.use_gsbi_shared_mode = 1,
 	.msm_i2c_config_gpio = gsbi_qup_i2c_gpio_config,
-        .share_uart_flag = 1,
 };
 #endif
 
@@ -1830,9 +1826,11 @@ static struct platform_device *early_devices[] __initdata = {
 	&msm_device_dmov_adm1,
 };
 
-static struct platform_device msm_tsens_device = {
-	.name   = "tsens-tm",
-	.id = -1,
+static struct tsens_platform_data tenderloin_tsens_pdata  = {
+	.tsens_factor           = 1000,
+	.hw_type                = MSM_8660,
+	.tsens_num_sensor       = 1,
+	.slope                  = {702},
 };
 
 #if defined(CONFIG_MSM_RTB)
@@ -2213,8 +2211,6 @@ static struct platform_device *tenderloin_devices[] __initdata = {
 #ifdef CONFIG_HW_RANDOM_MSM
 	&msm_device_rng,
 #endif
-	&msm_tsens_device,
-        //        &cable_detect_device,
 	&msm8660_rpm_device,
 #ifdef CONFIG_ION_MSM
 	&ion_dev,
@@ -2825,13 +2821,14 @@ static unsigned int msm_wm8958_setup_power(void)
 
 		}
 		wm8994_ldo_power(1);
+		wm8994_reg_status = 1;
 		mdelay(30);
 		return rc;
 }
 
 static void msm_wm8958_shutdown_power(void)
 {
-#if 1
+ if (wm8994_reg_status){
 		static struct regulator *tp_5v0 = NULL;
 		int rc;
 
@@ -2859,55 +2856,14 @@ static void msm_wm8958_shutdown_power(void)
 				pr_err("%s: Disable regulator 8058_s3 failed\n", __func__);
 
 		regulator_put(vreg_wm8958);
-#else
-		pr_err("%s: codec power shutdown - NOPE\n", __func__);
+		wm8994_reg_status = 0;
+ }else{
+		pr_err("%s: codec wm8994_reg_status = %d\n", __func__, wm8994_reg_status);
 		return;
-#endif
-}
-#if 0
-static unsigned int msm_wm8958_setup_power(void)
-{
-	int rc=0;
+ }
 
-	pr_err("%s: codec power setup\n", __func__);
-
-	vreg_wm8958 = regulator_get(NULL, "8058_s3");
-	if (IS_ERR(vreg_wm8958)) {
-		pr_err("%s: Unable to get 8058_s3\n", __func__);
-		return -ENODEV;
-	}
-
-	if(regulator_set_voltage(vreg_wm8958, 1800000, 1800000)){
-		pr_err("%s: Unable to set regulator voltage: votg_8058_s3\n", __func__);
-		return -ENODEV;
-	}
-
-	rc = regulator_enable(vreg_wm8958);
-
-	if (rc){
-		pr_err("%s: Enable regulator 8058_s3 failed\n", __func__);
-	}
-	wm8994_ldo_power(1);
-	mdelay(30);
-	return rc;
 }
 
-static void msm_wm8958_shutdown_power(void)
-{
-	int rc;
-
-	pr_err("%s: codec power shutdown\n", __func__);
-
-	wm8994_ldo_power(0);
-
-	rc = regulator_disable(vreg_wm8958);
-
-	if (rc)
-		pr_err("%s: Disable regulator 8058_s3 failed\n", __func__);
-
-	regulator_put(vreg_wm8958);
-}
-#endif
 static struct wm8994_pdata wm8958_pdata = {
 	.gpio_defaults = { 	0x0001, //GPIO1 AUDIO_AMP_EN write 0x41 to enable AMP
 						0x8001, //GPIO2 MCLK2 Pull Control
@@ -3354,7 +3310,7 @@ static void __init tenderloin_init(void)
           pr_err("meminfo_init() failed!\n");
 
 	platform_device_register(&msm_gpio_device);
-
+	msm_tsens_early_init(&tenderloin_tsens_pdata);
 	BUG_ON(msm_rpm_init(&msm8660_rpm_data));
 	BUG_ON(msm_rpmrs_levels_init(&msm_rpmrs_data));
 
@@ -3427,10 +3383,9 @@ static void __init tenderloin_init(void)
         tenderloin_init_fb();
 
 	lcdc_lg_panel_power(1);
-        //        return 0;
-        //        tenderloin_gpio_mpp_init();
+        tenderloin_gpio_mpp_init();
         tenderloin_usb_init();
-
+        platform_device_register(&tenderloin_8901_mpp_vreg);
 #ifdef CONFIG_MSM_DSPS
 		msm8x60_init_dsps();
 #endif
