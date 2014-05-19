@@ -148,12 +148,6 @@ static int hci_smd_close(struct hci_dev *hdev)
 }
 
 
-static void hci_smd_destruct(struct hci_dev *hdev)
-{
-	if (NULL != hdev->driver_data)
-		kfree(hdev->driver_data);
-}
-
 static void hci_smd_recv_data(void)
 {
 	int len = 0;
@@ -486,12 +480,9 @@ static int hci_smd_register_smd(struct hci_smd_data *hsmd)
 
 	hsmd->hdev = hdev;
 	hdev->bus = HCI_SMD;
-	hdev->driver_data = NULL;
 	hdev->open  = hci_smd_open;
 	hdev->close = hci_smd_close;
 	hdev->send  = hci_smd_send_frame;
-	hdev->destruct = hci_smd_destruct;
-	hdev->owner = THIS_MODULE;
 
 
 	tasklet_init(&hsmd->rx_task,
@@ -545,9 +536,7 @@ static void hci_smd_deregister_dev(struct hci_smd_data *hsmd)
 		BT_INFO("HCI device un-registration going on");
 
 		if (hsmd->hdev) {
-			if (hci_unregister_dev(hsmd->hdev) < 0)
-				BT_ERR("Can't unregister HCI device %s",
-					hsmd->hdev->name);
+			hci_unregister_dev(hsmd->hdev);
 
 			hci_free_dev(hsmd->hdev);
 			hsmd->hdev = NULL;
