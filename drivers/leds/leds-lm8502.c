@@ -39,7 +39,6 @@
 #include "../staging/android/timed_output.h"
 #include "leds-lm8502.h"
 
-
 //TODO: There are no register settings for auto-increment. Assuming feature missing in chip for now.
 //#define AUTO_INCR_WRITE
 //TODO: The dev board did not have the strobe pin connected. Disabling for now.
@@ -916,7 +915,7 @@ static void lm8502_mod_brightness(struct work_struct *work)
             for(i = 0; i < led_config->nleds; i++)
             {
                 lm8502_i2c_write_reg(led_config->client, led_config->led_list[i].current_addr, pwm_value);
-                printk(KERN_DEBUG"lm8502_mod_brightness: set LED%d brightness (%d) percent\n", 
+                pr_debug("lm8502_mod_brightness: set LED%d brightness (%d) percent\n", 
                     (led_config->led_list[i].current_addr - 0x25), led_config->brightness);
             }
             break;
@@ -1427,7 +1426,7 @@ static int lm8502_i2c_probe(struct i2c_client *client, const struct i2c_device_i
     u8 index;
     u8 reg;
 
-    printk(KERN_DEBUG"LM8502 probe called\n");
+    pr_debug("LM8502 probe called\n");
 
     /* Check the platform data. */
     if (pdata == NULL) {
@@ -1570,7 +1569,7 @@ static int lm8502_i2c_probe(struct i2c_client *client, const struct i2c_device_i
 
         if(leds[i].default_state == LED_ON)
         {
-            printk(KERN_DEBUG"LM8502: Turning %s on to default %d duty cycle\n",
+            pr_debug("LM8502: Turning %s on to default %d duty cycle\n",
                 leds[i].cdev.name, leds[i].default_brightness);
 
             leds[i].cdev.brightness = leds[i].default_brightness;
@@ -1914,7 +1913,7 @@ static int __init lm8502_module_init(void)
 {
     int ret;
 
-    printk(KERN_DEBUG "LM8502 module init called\n");
+    pr_debug("LM8502 module init called\n");
     ret = i2c_add_driver(&lm8502_i2c_driver);
     return (ret);
 }
