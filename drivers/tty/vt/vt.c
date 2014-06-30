@@ -3942,8 +3942,8 @@ void poke_blanked_console(void)
 		unblank_screen();
 	else if (blankinterval) {
 		mod_timer(&console_timer, jiffies + (blankinterval * HZ));
-		blank_state = blank_normal_wait;
 	}
+	blank_state = blank_normal_wait;
 }
 
 /*
