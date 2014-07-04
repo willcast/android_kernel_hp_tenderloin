@@ -82,10 +82,11 @@ static struct msm_fb_data_type *mfd_list[MAX_FBI_LIST];
 static int mfd_list_index;
 
 static u32 msm_fb_pseudo_palette[16] = {
-	0x00000000, 0xffffffff, 0xffffffff, 0xffffffff,
-	0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-	0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-	0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff
+	// xxRRGGBB
+	0x00000000, 0x00800000, 0x00008000, 0x00808000,
+	0x00000080, 0x00800080, 0x00008080, 0x00c0c0c0,
+	0x00404040, 0x00ff0000, 0x0000ff00, 0x00ffff00,
+	0x000000ff, 0x00ff00ff, 0x0000ffff, 0x00ffffff
 };
 
 static struct ion_client *iclient;
@@ -853,6 +854,7 @@ static void msmfb_early_resume(struct early_suspend *h)
 	struct msm_fb_data_type *mfd = container_of(h, struct msm_fb_data_type,
 						early_suspend);
 	struct msm_fb_panel_data *pdata = NULL;
+	struct fb_event event;
 
 	msm_fb_pan_idle(mfd);
 
@@ -868,6 +870,11 @@ static void msmfb_early_resume(struct early_suspend *h)
 	}
 
 	msm_fb_resume_sub(mfd);
+
+	event.info = mfd->fbi;
+	event.data = NULL;
+	fb_notifier_call_chain(FB_EVENT_RESUME, &event);
+
 }
 #endif
 
@@ -1478,7 +1485,8 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	mfd->ref_cnt = 0;
 	mfd->sw_currently_refreshing = FALSE;
 	mfd->sw_refreshing_enable = TRUE;
-	mfd->panel_power_on = FALSE;
+	mfd->panel_power_on = TRUE;
+	bl_updated = 1;
 
 	mfd->pan_waiting = FALSE;
 	init_completion(&mfd->pan_comp);

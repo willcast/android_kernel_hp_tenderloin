@@ -692,7 +692,7 @@ static struct regulator_init_data saw_s0_init_data = {
 			.name = "8901_s0",
 			.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
 			.min_uV = 800000,
-			.max_uV = 1250000,
+			.max_uV = 1350000,
 		},
 		.consumer_supplies = vreg_consumers_8901_S0,
 		.num_consumer_supplies = ARRAY_SIZE(vreg_consumers_8901_S0),
@@ -703,7 +703,7 @@ static struct regulator_init_data saw_s1_init_data = {
 			.name = "8901_s1",
 			.valid_ops_mask = REGULATOR_CHANGE_VOLTAGE,
 			.min_uV = 800000,
-			.max_uV = 1250000,
+			.max_uV = 1350000,
 		},
 		.consumer_supplies = vreg_consumers_8901_S1,
 		.num_consumer_supplies = ARRAY_SIZE(vreg_consumers_8901_S1),
@@ -2551,13 +2551,15 @@ static void msm_hsusb_vbus_power(unsigned phy_info, int on)
 		votg_5v_switch = regulator_get(NULL, "8901_usb_otg");
 		if (IS_ERR(votg_5v_switch)) {
 			pr_err("%s: unable to get votg_5v_switch\n", __func__);
+			votg_5v_switch = NULL;
 			return;
 		}
 	}
 	if (!ext_5v_reg) {
-		ext_5v_reg = regulator_get(NULL, "8901_mpp0");
+		ext_5v_reg = regulator_get(NULL, "ext_5v");
 		if (IS_ERR(ext_5v_reg)) {
 			pr_err("%s: unable to get ext_5v_reg\n", __func__);
+			ext_5v_reg = NULL;
 			return;
 		}
 	}
@@ -4543,6 +4545,7 @@ static struct user_pin bt_pins[] = {
 		.options    =  0,
 		.irq_handler = NULL,
 		.irq_config =  0,
+		.init_req   =  0,
 	},
 	{
 		.name       =  "host_wake",
@@ -4555,7 +4558,8 @@ static struct user_pin bt_pins[] = {
 		.options    =  PIN_IRQ | PIN_WAKEUP_SOURCE,
 		.irq_handler = NULL,
 		.irq_config = IRQF_TRIGGER_RISING,
-		.irq_handle_mode = IRQ_HANDLE_AUTO
+		.irq_handle_mode = IRQ_HANDLE_AUTO,
+		.init_req   =  1,
 	},
 };
 
@@ -5976,6 +5980,7 @@ static struct gpio_keys_button topaz_wifi_gpio_keys_buttons[] = {
 		.desc           = "VolUp",
 		.active_low     = 1,
 		.type		= EV_KEY,
+		.debounce_interval = 50,
 		.wakeup		= 0
 	},
 	{
@@ -5984,6 +5989,7 @@ static struct gpio_keys_button topaz_wifi_gpio_keys_buttons[] = {
 		.desc           = "VolDn",
 		.active_low     = 1,
 		.type		= EV_KEY,
+		.debounce_interval = 50,
 		.wakeup		= 0
 	},
 	{
@@ -5992,6 +5998,7 @@ static struct gpio_keys_button topaz_wifi_gpio_keys_buttons[] = {
 		.desc           = "Home",
 		.active_low     = 1,
 		.type		= EV_KEY,
+		.debounce_interval = 50,
 		.wakeup		= 1
 	},
 };
@@ -6499,8 +6506,8 @@ static struct regulator_consumer_supply vreg_consumers_PM8901_S4_PC[] = {
 /* RPM early regulator constraints */
 static struct rpm_regulator_init_data rpm_regulator_early_init_data[] = {
 	/*	 ID       a_on pd ss min_uV   max_uV   init_ip    freq */
-	RPM_SMPS(PM8058_S0, 0, 1, 1,  500000, 1250000, SMPS_HMIN, 1p60),
-	RPM_SMPS(PM8058_S1, 0, 1, 1,  500000, 1250000, SMPS_HMIN, 1p60),
+	RPM_SMPS(PM8058_S0, 0, 1, 1,  500000, 1350000, SMPS_HMIN, 1p60),
+	RPM_SMPS(PM8058_S1, 0, 1, 1,  500000, 1350000, SMPS_HMIN, 1p60),
 };
 
 /* RPM regulator constraints */
@@ -7507,7 +7514,8 @@ static void __init pm8901_vreg_mpp0_init(void)
 	 * implies that the regulator connected to MPP0 is enabled when
 	 * MPP0 is low.
 	 */
-	if (machine_is_msm8x60_surf() || machine_is_msm8x60_fusion()) {
+	if (machine_is_msm8x60_surf() || machine_is_msm8x60_fusion()
+			|| machine_is_tenderloin()) {
 		msm_gpio_regulator_pdata[GPIO_VREG_ID_EXT_5V].active_low = 1;
 		pm8901_vreg_mpp0.config.control = PM8XXX_MPP_DOUT_CTRL_HIGH;
 	} else {
@@ -7646,6 +7654,9 @@ static struct platform_device *surf_devices[] __initdata = {
 #endif
 #ifdef CONFIG_MSM_CAMERA
 #ifndef CONFIG_MSM_CAMERA_V4L2
+#ifdef CONFIG_WEBCAM_MT9M113
+	&msm_camera_sensor_webcam_mt9m113,
+#endif
 #ifdef CONFIG_MT9E013
 	&msm_camera_sensor_mt9e013,
 #endif
@@ -7965,10 +7976,10 @@ static void __init reserve_pmem_memory(void)
 {
 #ifdef CONFIG_ANDROID_PMEM
 #ifndef CONFIG_MSM_MULTIMEDIA_USE_ION
-	reserve_memory_for(&android_pmem_adsp_pdata);
 	reserve_memory_for(&android_pmem_smipool_pdata);
 	reserve_memory_for(&android_pmem_pdata);
 #endif
+	reserve_memory_for(&android_pmem_adsp_pdata);
 	reserve_memory_for(&android_pmem_audio_pdata);
 	msm8x60_reserve_table[MEMTYPE_EBI1].size += pmem_kernel_ebi1_size;
 #endif
@@ -8632,7 +8643,7 @@ static struct pm8xxx_vibrator_platform_data pm8058_vib_pdata = {
 };
 
 static struct pm8xxx_rtc_platform_data pm8058_rtc_pdata = {
-	.rtc_write_enable       = false,
+	.rtc_write_enable       = true,
 	.rtc_alarm_powerup	= false,
 };
 
@@ -10048,7 +10059,7 @@ static struct i2c_registry msm8x60_i2c_devices[] __initdata = {
 #ifdef CONFIG_MSM_CAMERA
 #ifndef CONFIG_MSM_CAMERA_V4L2
 	{
-		I2C_SURF | I2C_FFA | I2C_FLUID ,
+		I2C_SURF | I2C_FFA | I2C_FLUID | I2C_TENDERLOIN,
 		MSM_GSBI4_QUP_I2C_BUS_ID,
 		msm_camera_boardinfo,
 		ARRAY_SIZE(msm_camera_boardinfo),
@@ -12382,7 +12393,7 @@ static int lcdc_common_panel_power(int on)
 
 		gpio_set_value_cansleep(GPIO_LVDS_SHDN_N, 1);
 		gpio_set_value_cansleep(GPIO_LCD_PWR_EN, 1);
-		mdelay(2);
+		mdelay(20);
 		// enable backlight later
 		delay_bl_power_up = true;
 	}

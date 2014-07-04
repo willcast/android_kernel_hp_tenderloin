@@ -411,7 +411,7 @@ static int snddev_icodec_open_rx(struct snddev_icodec_state *icodec)
 
 	icodec->enabled = 1;
 
-	wake_unlock(&drv->rx_idlelock);
+	//wake_unlock(&drv->rx_idlelock);
 	return 0;
 
 error_pamp:
@@ -583,7 +583,7 @@ static int snddev_icodec_close_rx(struct snddev_icodec_state *icodec)
 {
 	struct snddev_icodec_drv_state *drv = &snddev_icodec_drv;
 
-	wake_lock(&drv->rx_idlelock);
+	//wake_lock(&drv->rx_idlelock);
 
 	if (drv->snddev_vreg)
 		vreg_mode_vote(drv->snddev_vreg, 0, SNDDEV_HIGH_POWER_MODE);
