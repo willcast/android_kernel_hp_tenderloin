@@ -42,6 +42,8 @@ static int ehci_msm_reset(struct usb_hcd *hcd)
 	ehci->caps = USB_CAPLENGTH;
 	hcd->has_tt = 1;
 
+	ehci->log2_irq_thresh = 5;
+
 	retval = ehci_setup(hcd);
 	if (retval)
 		return retval;
@@ -116,6 +118,8 @@ static int ehci_msm_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Unable to create HCD\n");
 		return  -ENOMEM;
 	}
+
+	hcd_to_bus(hcd)->skip_resume = true;
 
 	hcd->irq = platform_get_irq(pdev, 0);
 	if (hcd->irq < 0) {
