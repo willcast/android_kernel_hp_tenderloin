@@ -242,7 +242,7 @@ static int msm_volume_put(struct snd_kcontrol *kcontrol,
 	int factor = ucontrol->value.integer.value[2];
 	u64 session_mask = 0;
 
-	if (factor > 10000)
+	if ((factor == 0) || (factor > 10000))
 		return -EINVAL;
 
 	if ((volume < 0) || (volume/factor > 100))
