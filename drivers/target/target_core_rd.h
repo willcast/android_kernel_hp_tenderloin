@@ -40,6 +40,7 @@ struct rd_dev_sg_table {
 } ____cacheline_aligned;
 
 #define RDF_HAS_PAGE_COUNT	0x01
+#define RDF_NULLIO		0x02
 
 struct rd_dev {
 	int		rd_direct;
