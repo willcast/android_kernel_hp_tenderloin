@@ -816,7 +816,7 @@ kgsl_gem_get_bufinfo_ioctl(struct drm_device *dev, void *data,
 	priv = obj->driver_private;
 
 	if (!kgsl_gem_memory_allocated(obj)) {
-		DRM_ERROR("Memory not allocated for this object\n");
+		//DRM_ERROR("Memory not allocated for this object\n");
 		goto out;
 	}
 
@@ -898,7 +898,7 @@ kgsl_gem_set_active_ioctl(struct drm_device *dev, void *data,
 	priv = obj->driver_private;
 
 	if (args->active < 0 || args->active >= priv->bufcount) {
-		DRM_ERROR("Invalid active buffer %d\n", args->active);
+		// DRM_ERROR("Invalid active buffer %d\n", args->active);
 		goto out;
 	}
 
