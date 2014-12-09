@@ -32,7 +32,9 @@ static int msm_fb_bl_update_status(struct backlight_device *pbd)
 	struct msm_fb_data_type *mfd = bl_get_data(pbd);
 	__u32 bl_lvl;
 
-	bl_lvl = pbd->props.brightness;
+	/* 0-127 => 4-255 */
+	bl_lvl = (pbd->props.brightness > 2) ? (pbd->props.brightness * 2 + 1) : 4;
+
 	down(&mfd->sem);
 	msm_fb_set_backlight(mfd, bl_lvl);
 	up(&mfd->sem);
