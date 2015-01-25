@@ -1344,6 +1344,25 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 		bpp = 2;
 		break;
 
+	case MDP_BGR_565:
+		fix->type = FB_TYPE_PACKED_PIXELS;
+		fix->xpanstep = 1;
+		fix->ypanstep = 1;
+		var->vmode = FB_VMODE_NONINTERLACED;
+		var->blue.offset = 11;
+		var->green.offset = 5;
+		var->red.offset = 0;
+		var->blue.length = 5;
+		var->green.length = 6;
+		var->red.length = 5;
+		var->blue.msb_right = 0;
+		var->green.msb_right = 0;
+		var->red.msb_right = 0;
+		var->transp.offset = 0;
+		var->transp.length = 0;
+		bpp = 2;
+		break;
+
 	case MDP_RGB_888:
 		fix->type = FB_TYPE_PACKED_PIXELS;
 		fix->xpanstep = 1;
