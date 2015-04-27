@@ -382,12 +382,78 @@ static ssize_t msm_fb_msm_fb_type(struct device *dev,
 	return ret;
 }
 
+
+static int pcc_r = 32768, pcc_g = 32768, pcc_b = 32768;
+static ssize_t mdp_get_rgb(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d %d %d\n", pcc_r, pcc_g, pcc_b);
+}
+
+/**
+ * simple color temperature interface using polynomial color correction
+ *
+ * input values are r/g/b adjustments from 0-32768 representing 0 -> 1
+ *
+ * example adjustment @ 3500K:
+ * 1.0000 / 0.5515 / 0.2520 = 32768 / 25828 / 17347
+ *
+ * reference chart:
+ * http://www.vendian.org/mncharity/dir3/blackbody/UnstableURLs/bbr_color.html
+ */
+static ssize_t mdp_set_rgb(struct device *dev,
+               struct device_attribute *attr,
+               const char *buf, size_t count)
+{
+	uint32_t r = 0, g = 0, b = 0;
+	struct mdp_pcc_cfg_data pcc_cfg;
+
+	if (count > 19)
+		return -EINVAL;
+
+	sscanf(buf, "%d %d %d", &r, &g, &b);
+
+	if (r < 0 || r > 32768)
+		return -EINVAL;
+	if (g < 0 || g > 32768)
+		return -EINVAL;
+	if (b < 0 || b > 32768)
+		return -EINVAL;
+
+	pr_info("%s: r=%d g=%d b=%d", __func__, r, g, b);
+
+	memset(&pcc_cfg, 0, sizeof(struct mdp_pcc_cfg_data));
+
+	pcc_cfg.block = MDP_BLOCK_DMA_P;
+	if (r == 32768 && g == 32768 && b == 32768)
+		pcc_cfg.ops = MDP_PP_OPS_DISABLE;
+	else
+		pcc_cfg.ops = MDP_PP_OPS_ENABLE;
+	pcc_cfg.ops |= MDP_PP_OPS_WRITE;
+	pcc_cfg.r.r = r;
+	pcc_cfg.g.g = g;
+	pcc_cfg.b.b = b;
+
+	if (mdp4_pcc_cfg(&pcc_cfg) == 0) {
+		pcc_r = r;
+		pcc_g = g;
+		pcc_b = b;
+		return count;
+	}
+
+	return -EINVAL;
+}
+
 static DEVICE_ATTR(msm_fb_type, S_IRUGO, msm_fb_msm_fb_type, NULL);
 static DEVICE_ATTR(msm_fb_fps_level, S_IRUGO | S_IWUSR | S_IWGRP, NULL, \
 				msm_fb_fps_level_change);
+static DEVICE_ATTR(rgb, S_IRUGO | S_IWUSR | S_IWGRP, mdp_get_rgb, \
+                                mdp_set_rgb);
+
 static struct attribute *msm_fb_attrs[] = {
 	&dev_attr_msm_fb_type.attr,
 	&dev_attr_msm_fb_fps_level.attr,
+	&dev_attr_rgb.attr,
 	NULL,
 };
 static struct attribute_group msm_fb_attr_group = {
@@ -536,9 +602,6 @@ static int msm_fb_probe(struct platform_device *pdev)
 		}
 	}
 
-
-	/* Update dma config on HP Touchpad to correct color reverting */
-	mdp4_overlay_dmap_cfg(mfd, 1);
 
 	return 0;
 }
@@ -1373,25 +1436,6 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 		bpp = 2;
 		break;
 
-	case MDP_BGR_565:
-		fix->type = FB_TYPE_PACKED_PIXELS;
-		fix->xpanstep = 1;
-		fix->ypanstep = 1;
-		var->vmode = FB_VMODE_NONINTERLACED;
-		var->blue.offset = 11;
-		var->green.offset = 5;
-		var->red.offset = 0;
-		var->blue.length = 5;
-		var->green.length = 6;
-		var->red.length = 5;
-		var->blue.msb_right = 0;
-		var->green.msb_right = 0;
-		var->red.msb_right = 0;
-		var->transp.offset = 0;
-		var->transp.length = 0;
-		bpp = 2;
-		break;
-
 	case MDP_RGB_888:
 		fix->type = FB_TYPE_PACKED_PIXELS;
 		fix->xpanstep = 1;
@@ -1445,25 +1489,6 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 		var->green.msb_right = 0;
 		var->red.msb_right = 0;
 		var->transp.offset = 0;
-		var->transp.length = 8;
-		bpp = 4;
-		break;
-
-	case MDP_BGRA_8888:
-		fix->type = FB_TYPE_PACKED_PIXELS;
-		fix->xpanstep = 1;
-		fix->ypanstep = 1;
-		var->vmode = FB_VMODE_NONINTERLACED;
-		var->blue.offset = 16;
-		var->green.offset = 8;
-		var->red.offset = 0;
-		var->blue.length = 8;
-		var->green.length = 8;
-		var->red.length = 8;
-		var->blue.msb_right = 0;
-		var->green.msb_right = 0;
-		var->red.msb_right = 0;
-		var->transp.offset = 24;
 		var->transp.length = 8;
 		bpp = 4;
 		break;
@@ -1598,8 +1623,7 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	mfd->ref_cnt = 0;
 	mfd->sw_currently_refreshing = FALSE;
 	mfd->sw_refreshing_enable = TRUE;
-	mfd->panel_power_on = TRUE;
-	bl_updated = 1;
+	mfd->panel_power_on = FALSE;
 
 	mfd->pan_waiting = FALSE;
 	init_completion(&mfd->pan_comp);
@@ -2469,15 +2493,11 @@ static int msm_fb_set_par(struct fb_info *info)
 		break;
 
 	case 32:
-		if (var->transp.offset == 24) {
-			if (var->red.offset == 16)
-				mfd->fb_imgType	= MDP_BGRA_8888;
-			else
-				mfd->fb_imgType = MDP_RGBA_8888;
-		} else {
+		if (var->transp.offset == 24)
 			mfd->fb_imgType = MDP_ARGB_8888;
-		}
-	break;
+		else
+			mfd->fb_imgType = MDP_RGBA_8888;
+		break;
 
 	default:
 		return -EINVAL;
