@@ -46,6 +46,7 @@
  * Calibration should respect this limit. */
 #define L_VAL_SCPLL_CAL_MIN	0x08 /* =  432 MHz with 27MHz source */
 
+#define MIN_VDD_SC		 750000 /* uV */
 #define MAX_VDD_SC		1400000 /* uV */
 #define MAX_VDD_MEM		1400000 /* uV */
 #define MAX_VDD_DIG		1400000 /* uV */
@@ -194,7 +195,8 @@ static struct clkctl_l2_speed l2_freq_tbl_v2[] = {
 	[19] = {1404000,  1, 0x1A, 1200000, 1250000, 4},
 	[20] = {1458000,  1, 0x1B, 1200000, 1250000, 4},
 	[21] = {1512000,  1, 0x1C, 1200000, 1275000, 4},
-	[22] = {1566000,  1, 0x1D, 1225000, 1275000, 3},
+	[22] = {1566000,  1, 0x1D, 1225000, 1275000, 4},
+	[23] = {1620000,  1, 0x1E, 1250000, 1275000, 3}
 };
 #else
 static struct clkctl_l2_speed l2_freq_tbl_v2[] = {
@@ -255,12 +257,12 @@ static struct clkctl_acpu_speed acpu_freq_tbl_oc[] = {
   { {1, 1}, 1674000,  ACPU_SCPLL, 0, 0, 1, 0x20, L2(20), 1275000, 0x03006000},
   { {1, 1}, 1728000,  ACPU_SCPLL, 0, 0, 1, 0x21, L2(21), 1300000, 0x03006000},
   { {1, 1}, 1782000,  ACPU_SCPLL, 0, 0, 1, 0x22, L2(21), 1325000, 0x03006000},
-  { {1, 1}, 1836000,  ACPU_SCPLL, 0, 0, 1, 0x23, L2(21), 1337500, 0x03006000},
-  { {1, 1}, 1890000,  ACPU_SCPLL, 0, 0, 1, 0x24, L2(21), 1350000, 0x03006000},
-  { {1, 1}, 1914000,  ACPU_SCPLL, 0, 0, 1, 0x25, L2(22), 1375000, 0x03006000},
-  { {1, 1}, 2022000,  ACPU_SCPLL, 0, 0, 1, 0x26, L2(22), 1400000, 0x03006000},
-  { {1, 1}, 2103000,  ACPU_SCPLL, 0, 0, 1, 0x27, L2(22), 1400000, 0x03006000},
-  { {1, 1}, 2157000,  ACPU_SCPLL, 0, 0, 1, 0x28, L2(22), 1400000, 0x03006000},
+  { {1, 1}, 1836000,  ACPU_SCPLL, 0, 0, 1, 0x23, L2(22), 1350000, 0x03006000},
+  { {1, 1}, 1890000,  ACPU_SCPLL, 0, 0, 1, 0x24, L2(22), 1350000, 0x03006000},
+  { {1, 1}, 1914000,  ACPU_SCPLL, 0, 0, 1, 0x25, L2(23), 1375000, 0x03006000},
+  { {1, 1}, 2022000,  ACPU_SCPLL, 0, 0, 1, 0x26, L2(23), 1400000, 0x03006000},
+  { {1, 1}, 2103000,  ACPU_SCPLL, 0, 0, 1, 0x27, L2(23), 1400000, 0x03006000},
+  { {1, 1}, 2157000,  ACPU_SCPLL, 0, 0, 1, 0x28, L2(23), 1400000, 0x03006000},
   { {0, 0}, 0 },
 };
 
@@ -766,13 +768,51 @@ static void __init cpufreq_table_init(void)
 		freq_table[cpu][freq_cnt].index = freq_cnt;
 		freq_table[cpu][freq_cnt].frequency = CPUFREQ_TABLE_END;
 
-		pr_info("CPU%d: %d scaling frequencies supported.\n",
-			cpu, freq_cnt);
+		pr_info("CPU%d: %d scaling frequencies supported, %i rows\n",
+			cpu, freq_cnt, i);
 
 		/* Register table with CPUFreq. */
 		cpufreq_frequency_table_get_attr(freq_table[cpu], cpu);
 	}
 }
+
+#ifdef CONFIG_CPU_FREQ_VDD_LEVELS
+ssize_t acpuclk_get_vdd_levels_str(char *buf)
+{
+	int i, len = 0;
+	if (buf)
+	{
+		mutex_lock(&drv_state.lock);
+		for (i = 0; acpu_freq_tbl[i].acpuclk_khz; ++i) {
+			if (freq_table[0][i].frequency != CPUFREQ_ENTRY_INVALID)
+				len += sprintf(buf + len, "%8u: %4d\n", acpu_freq_tbl[i].acpuclk_khz, acpu_freq_tbl[i].vdd_sc);
+		}
+		mutex_unlock(&drv_state.lock);
+	}
+
+	return len;
+}
+
+void acpuclk_set_vdd(unsigned acpu_khz, int vdd)
+{
+	int i;
+	vdd = vdd / 25 * 25; //! regulator only accepts multiples of 25 (mV)
+	mutex_lock(&drv_state.lock);
+	for (i = 0; acpu_freq_tbl[i].acpuclk_khz; i++)
+	{
+		if (freq_table[0][i].frequency != CPUFREQ_ENTRY_INVALID)
+		{
+			if (acpu_khz == 0)
+				acpu_freq_tbl[i].vdd_sc = min(max((acpu_freq_tbl[i].vdd_sc + vdd), MIN_VDD_SC), MAX_VDD_SC);
+			else if (acpu_freq_tbl[i].acpuclk_khz == acpu_khz)
+				acpu_freq_tbl[i].vdd_sc = min(max(vdd, MIN_VDD_SC), MAX_VDD_SC);
+		}
+	}
+	mutex_unlock(&drv_state.lock);
+} 
+
+#endif
+
 #else
 static void __init cpufreq_table_init(void) {}
 #endif
