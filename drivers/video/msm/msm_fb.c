@@ -83,15 +83,15 @@ static int mfd_list_index;
 
 static u32 msm_fb_pseudo_palette[16] = {
 #ifdef CONFIG_FB_MSM_DEFAULT_DEPTH_RGB565
-	0x00000000, 0x00008000, 0x00000400, 0x00008400,
-	0x00000010, 0x00008010, 0x00000410, 0x0000c618,
-	0x00004208, 0x0000f800, 0x000007e0, 0x0000ffe0,
-	0x0000001f, 0x0000f81f, 0x000007ff, 0x0000ffff
-#elif defined(CONFIG_FB_MSM_DEFAULT_DEPTH_BGR565)
 	0x00000000, 0x00000010, 0x00000400, 0x00000410,
 	0x00008000, 0x00008010, 0x00008400, 0x0000c618,
 	0x00004208, 0x0000001f, 0x000007e0, 0x000007ff,
 	0x0000f800, 0x0000f81f, 0x0000ffe0, 0x0000ffff
+#elif defined(CONFIG_FB_MSM_DEFAULT_DEPTH_BGR565)
+	0x00000000, 0x00008000, 0x00000400, 0x00008400,
+	0x00000010, 0x00008010, 0x00000410, 0x0000c618,
+	0x00004208, 0x0000f800, 0x000007e0, 0x0000ffe0,
+	0x0000001f, 0x0000f81f, 0x000007ff, 0x0000ffff
 #elif defined(CONFIG_FB_MSM_DEFAULT_DEPTH_RGBA8888)
 	//xxRRGGBB
 	0x00000000, 0x00800000, 0x00008000, 0x00808000,
@@ -602,6 +602,8 @@ static int msm_fb_probe(struct platform_device *pdev)
 		}
 	}
 
+	/* Update dma config on HP Touchpad to correct color reverting */
+	mdp4_overlay_dmap_cfg(mfd, 1);
 
 	return 0;
 }
@@ -1422,9 +1424,28 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 		fix->xpanstep = 1;
 		fix->ypanstep = 1;
 		var->vmode = FB_VMODE_NONINTERLACED;
-		var->blue.offset = 0;
+		var->blue.offset = 11;
 		var->green.offset = 5;
-		var->red.offset = 11;
+		var->red.offset = 0;
+		var->blue.length = 5;
+		var->green.length = 6;
+		var->red.length = 5;
+		var->blue.msb_right = 0;
+		var->green.msb_right = 0;
+		var->red.msb_right = 0;
+		var->transp.offset = 0;
+		var->transp.length = 0;
+		bpp = 2;
+		break;
+
+	case MDP_BGR_565:
+		fix->type = FB_TYPE_PACKED_PIXELS;
+		fix->xpanstep = 1;
+		fix->ypanstep = 1;
+		var->vmode = FB_VMODE_NONINTERLACED;
+		var->blue.offset = 11;
+		var->green.offset = 5;
+		var->red.offset = 0;
 		var->blue.length = 5;
 		var->green.length = 6;
 		var->red.length = 5;
@@ -1489,6 +1510,25 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 		var->green.msb_right = 0;
 		var->red.msb_right = 0;
 		var->transp.offset = 0;
+		var->transp.length = 8;
+		bpp = 4;
+		break;
+
+	case MDP_BGRA_8888:
+		fix->type = FB_TYPE_PACKED_PIXELS;
+		fix->xpanstep = 1;
+		fix->ypanstep = 1;
+		var->vmode = FB_VMODE_NONINTERLACED;
+		var->blue.offset = 16;
+		var->green.offset = 8;
+		var->red.offset = 0;
+		var->blue.length = 8;
+		var->green.length = 8;
+		var->red.length = 8;
+		var->blue.msb_right = 0;
+		var->green.msb_right = 0;
+		var->red.msb_right = 0;
+		var->transp.offset = 24;
 		var->transp.length = 8;
 		bpp = 4;
 		break;
@@ -1623,7 +1663,8 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	mfd->ref_cnt = 0;
 	mfd->sw_currently_refreshing = FALSE;
 	mfd->sw_refreshing_enable = TRUE;
-	mfd->panel_power_on = FALSE;
+	mfd->panel_power_on = TRUE;
+	bl_updated = 1;
 
 	mfd->pan_waiting = FALSE;
 	init_completion(&mfd->pan_comp);
@@ -2492,14 +2533,18 @@ static int msm_fb_set_par(struct fb_info *info)
 		}
 		break;
 
-	case 32:
-		if (var->transp.offset == 24)
-			mfd->fb_imgType = MDP_ARGB_8888;
+        case 32:
+		if (var->transp.offset == 24) {
+			if (var->red.offset == 16)
+				mfd->fb_imgType = MDP_BGRA_8888;
+			else
+				mfd->fb_imgType = MDP_RGBA_8888;
+		}
 		else
-			mfd->fb_imgType = MDP_RGBA_8888;
+			mfd->fb_imgType = MDP_ARGB_8888;
 		break;
-
-	default:
+	
+default:
 		return -EINVAL;
 	}
 
